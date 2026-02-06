@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@keyframes scaleFade {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-scale-fade {
+  animation: scaleFade 0.35s ease-out forwards;
+}
+
+.animate-pop {
+  animation: pop 0.4s ease-out forwards;
+}
