@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../index.css";
+import "../../index.css";
 import axios from "axios";
 import { Mail, Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
@@ -185,7 +185,7 @@ const Signup = () => {
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, cursor: "pointer" }}
                 whileTap={{ scale: 0.96 }}
                 type="submit"
                 disabled={loadingSignup}

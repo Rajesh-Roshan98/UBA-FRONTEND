@@ -174,6 +174,16 @@ const UserAvatar = () => {
               <Settings size={16} className="text-gray-500" /> 
               Settings
             </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/profile");
+              }}
+              className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <User size={16} className="text-gray-500" /> 
+              Profile
+            </button>
           </div>
 
           {/* Divider */}
