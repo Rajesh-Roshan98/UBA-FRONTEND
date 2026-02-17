@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { MailCheck, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,7 +26,7 @@ const VerifyEmail = () => {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(initialOtpSent);
   const [resendCooldown, setResendCooldown] = useState(
-    initialOtpSent ? COOLDOWN_TIME : 0,
+    initialOtpSent ? COOLDOWN_TIME : 0
   );
   const [pageReady, setPageReady] = useState(false);
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
@@ -107,6 +107,7 @@ const VerifyEmail = () => {
   /* ------------------- UI ------------------- */
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
+
       {/* MATRIX BACKGROUND (same as Login / Signup) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white" />
@@ -136,7 +137,9 @@ const VerifyEmail = () => {
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <ShieldCheck size={30} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Verify Email</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Verify Email
+            </h2>
             <p className="text-sm text-slate-600 mt-1">
               Secure account verification
             </p>
@@ -178,13 +181,7 @@ const VerifyEmail = () => {
             disabled={!otpSent || verifying}
             className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70"
           >
-            {verifying ? (
-              <>
-                <Spinner /> Verifying
-              </>
-            ) : (
-              "Verify Email"
-            )}
+            {verifying ? <><Spinner /> Verifying</> : "Verify Email"}
           </motion.button>
 
           <button
@@ -195,8 +192,8 @@ const VerifyEmail = () => {
             {sendingOtp
               ? "Sending OTP..."
               : resendCooldown > 0
-                ? `Resend OTP in ${resendCooldown}s`
-                : "Resend OTP"}
+              ? `Resend OTP in ${resendCooldown}s`
+              : "Resend OTP"}
           </button>
         </motion.div>
       </div>
@@ -219,6 +216,6 @@ const VerifyEmail = () => {
       )}
     </div>
   );
-};
+}
 
 export default VerifyEmail;

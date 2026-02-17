@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import "../../index.css";
+import "../index.css";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -82,6 +82,7 @@ const Login = () => {
 
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
+
       {/* ───── MATRIX GRID BACKGROUND (Same as Homepage) ───── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white" />
@@ -89,8 +90,7 @@ const Login = () => {
         <div
           className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[24px_24px]"
           style={{
-            maskImage:
-              "radial-gradient(circle at center, black 40%, transparent 100%)",
+            maskImage: "radial-gradient(circle at center, black 40%, transparent 100%)",
             WebkitMaskImage:
               "radial-gradient(circle at center, black 40%, transparent 100%)",
           }}
@@ -128,11 +128,7 @@ const Login = () => {
             </motion.div>
 
             {/* Form */}
-            <motion.form
-              variants={item}
-              onSubmit={loginHandler}
-              className="space-y-4"
-            >
+            <motion.form variants={item} onSubmit={loginHandler} className="space-y-4">
               {/* Email */}
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -160,7 +156,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600 cursor-pointer"
+                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600"
                 >
                   {showPassword ? <EyeOff /> : <Eye />}
                 </button>
@@ -168,7 +164,7 @@ const Login = () => {
 
               {/* Button */}
               <motion.button
-                whileHover={{ scale: 1.04, cursor: "pointer" }}
+                whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 disabled={loading}
                 type="submit"
@@ -183,10 +179,7 @@ const Login = () => {
             </motion.form>
 
             {/* Footer */}
-            <motion.p
-              variants={item}
-              className="mt-6 text-center text-sm text-slate-600"
-            >
+            <motion.p variants={item} className="mt-6 text-center text-sm text-slate-600">
               New user?{" "}
               <Link
                 to="/Signup"
@@ -200,6 +193,6 @@ const Login = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Login;
