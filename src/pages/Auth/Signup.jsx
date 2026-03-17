@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import "../index.css";
-import axios from "axios";
+import "../../index.css";
+import api from "../../services/api";
 import { Mail, Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -18,6 +18,10 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingSignup, setLoadingSignup] = useState(false);
 
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -25,20 +29,21 @@ const Signup = () => {
       return toast.error("All fields are required.");
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return toast.error("Please enter a valid email address.");
-    }
+    if (!emailRegex.test(email)) {
+          toast.error("Please enter a valid email address.");
+          return;
+        }
 
-    if (password.length < 6 || !/\d/.test(password)) {
+    if (!passwordRegex.test(password)) {
       return toast.error(
-        "Password must be at least 6 characters and contain a number."
+        "Password must be at least 8 characters and contain an uppercase letter, a lowercase letter, a number, and a special character."
       );
     }
 
     setLoadingSignup(true);
 
     try {
-      await axios.post(`${API_BASE}/api/v1/signup`, {
+      await api.post(`${API_BASE}/api/v1/signup`, {
         firstName,
         middleName,
         lastName,
@@ -185,7 +190,7 @@ const Signup = () => {
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.04 }}
+                whileHover={{ scale: 1.04, cursor: "pointer" }}
                 whileTap={{ scale: 0.96 }}
                 type="submit"
                 disabled={loadingSignup}

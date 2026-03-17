@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import "../index.css";
-import axios from "axios";
+import "../../index.css";
+import api from "../../services/api";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -18,9 +18,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // const passwordRegex =
-  //   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
   const loginHandler = async (e) => {
     e.preventDefault();
@@ -36,17 +36,17 @@ const Login = () => {
       return;
     }
 
-    // // Password strength validation
-    // if (!passwordRegex.test(password)) {
-    //   toast.error(
-    //     "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
-    //   );
-    //   return;
-    // }
+    // Password strength validation
+    if (!passwordRegex.test(password)) {
+      toast.error(
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+      );
+      return;
+    }
 
     try {
       setLoading(true);
-      const res = await axios.post(`${API_BASE}/api/v1/login`, {
+      const res = await api.post(`${API_BASE}/api/v1/login`, {
         email: email.trim(),
         password,
       });
@@ -56,14 +56,41 @@ const Login = () => {
         return;
       }
 
-      await login(res.data.token);
+      const token = res.data.token;
+      
+      // 1. Pass the token to AuthContext's login function
+      await login(token);
       toast.success("Login successful");
 
-      res.data.requiresOtp
-        ? navigate("/verify-otp", { state: { email } })
-        : navigate("/");
-    } catch {
-      toast.error("Invalid credentials or server error");
+      // 2. Handle Redirection based on OTP requirements
+      if (res.data.requiresOtp) {
+        navigate("/verify-otp", { state: { email } });
+      } else {
+        
+        // 🔥 FIX: Safely decode the JWT token to guarantee we get the correct role
+        let userRole = "user"; // Default fallback
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(window.atob(base64));
+          userRole = payload.role;
+        } catch (decodeErr) {
+          console.error("Could not decode token for role mapping", decodeErr);
+        }
+        
+        // 3. Role-Based Navigation
+        if (userRole === "admin") {
+          // Replaces history so the admin cannot use the back button to return to public pages
+          navigate("/admin-homepage", { replace: true });
+        } else {
+          // Normal users proceed normally without the replace override
+          navigate("/");
+        }
+      }
+
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || "Invalid credentials or server error";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -82,15 +109,15 @@ const Login = () => {
 
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
-
-      {/* ───── MATRIX GRID BACKGROUND (Same as Homepage) ───── */}
+      {/* ───── MATRIX GRID BACKGROUND ───── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white" />
 
         <div
           className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[24px_24px]"
           style={{
-            maskImage: "radial-gradient(circle at center, black 40%, transparent 100%)",
+            maskImage:
+              "radial-gradient(circle at center, black 40%, transparent 100%)",
             WebkitMaskImage:
               "radial-gradient(circle at center, black 40%, transparent 100%)",
           }}
@@ -128,8 +155,11 @@ const Login = () => {
             </motion.div>
 
             {/* Form */}
-            <motion.form variants={item} onSubmit={loginHandler} className="space-y-4">
-              {/* Email */}
+            <motion.form
+              variants={item}
+              onSubmit={loginHandler}
+              className="space-y-4"
+            >
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -142,7 +172,6 @@ const Login = () => {
                 />
               </div>
 
-              {/* Password */}
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -156,30 +185,41 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600"
+                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600 cursor-pointer"
                 >
-                  {showPassword ? <EyeOff /> : <Eye />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
 
-              {/* Button */}
+              {/* Forgot Password Link */}
+              <motion.div variants={item} className="text-right">
+                <Link
+                  to="/forget-password"
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Forgot Password?
+                </Link>
+              </motion.div>
+
               <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={loading}
                 type="submit"
                 className="w-full flex justify-center items-center gap-2
                 bg-indigo-600 text-white py-3 rounded-xl font-semibold
                 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/30
-                transition disabled:opacity-70"
+                transition disabled:opacity-70 cursor-pointer"
               >
                 {loading ? "Authenticating..." : "Login"}
                 <ArrowRight size={18} />
               </motion.button>
             </motion.form>
 
-            {/* Footer */}
-            <motion.p variants={item} className="mt-6 text-center text-sm text-slate-600">
+            <motion.p
+              variants={item}
+              className="mt-6 text-center text-sm text-slate-600"
+            >
               New user?{" "}
               <Link
                 to="/Signup"
@@ -193,6 +233,6 @@ const Login = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Login;

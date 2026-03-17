@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import { Mail, User, MessageSquare } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -26,7 +26,7 @@ const ContactUs = () => {
 
     try {
       setLoading(true);
-      await axios.post(`${API_BASE}/api/contact`, formData);
+      await api.post(`${API_BASE}/api/contact`, formData);
       toast.success("Message sent successfully!");
       setFormData({ name: "", email: "", message: "" });
     } catch (error) {

@@ -29,15 +29,43 @@ const Charts = ({ logs }) => {
 
   // ✅ Include all numeric metrics from your CSV
   const metrics = [
+    { key: "employee_name", label: "Employee Name", color: "rgba(16,185,129,1)" },
+    { key: "role", label: "Role", color: "rgba(59,130,246,1)" },
+    { key: "days_active", label: "Days Active", color: "rgba(244,63,94,1)" },
     { key: "login_count", label: "Login Count", color: "rgba(251,191,36,1)" },
+    { key: "login_per_day", label: "Login/Day", color: "rgba(239,68,68,1)" },
     { key: "unique_pcs", label: "Unique PCs", color: "rgba(16,185,129,1)" },
-    { key: "active_hours", label: "Active Hours", color: "rgba(59,130,246,1)" },
+    { key: "total_lifetime_hours", label: "Total Hours", color: "rgba(59,130,246,1)" },
+    { key: "total_activity", label: "Total Activity", color: "rgba(139,92,246,1)" },
+    { key: "activity_per_day", label: "Activity/Day", color: "rgba(244,63,94,1)" }, // ✅ NEW
+    { key: "avg_active_hours_per_day", label: "Avg Active Hours/Day", color: "rgba(59,130,246,1)" }, // ✅ FIXED
     { key: "actions_per_hour", label: "Actions/Hour", color: "rgba(16,185,129,1)" },
     { key: "file_access_count", label: "File Access Count", color: "rgba(139,92,246,1)" },
     { key: "file_copy_count", label: "File Copy Count", color: "rgba(6,182,212,1)" },
     { key: "removable_uploads", label: "Removable Uploads", color: "rgba(234,179,8,1)" },
     { key: "removable_downloads", label: "Removable Downloads", color: "rgba(244,63,94,1)" },
     { key: "decoy_access_count", label: "Decoy Access Count", color: "rgba(239,68,68,1)" },
+    
+    // ✅ Email Metrics
+    { key: "email_sent_count", label: "Emails Sent", color: "rgba(59,130,246,1)" },
+    { key: "total_email_size", label: "Total Email Size", color: "rgba(139,92,246,1)" },
+    { key: "avg_email_size", label: "Avg Email Size", color: "rgba(16,185,129,1)" },
+    { key: "attachment_count", label: "Attachments", color: "rgba(244,63,94,1)" },
+    
+    // 🚀 Temporal Behavior Metrics
+    { key: "after_hours_activity", label: "After Hours Activity", color: "rgba(251,191,36,1)" },
+    { key: "weekend_activity", label: "Weekend Activity", color: "rgba(234,179,8,1)" },
+    
+    // ✅ Device Security Metrics
+    { key: "device_activity_count", label: "Endpoint Activity", color: "rgba(6,182,212,1)" },
+    { key: "device_connect_count", label: "USB Connects", color: "rgba(16,185,129,1)" },
+    { key: "device_disconnect_count", label: "USB Disconnects", color: "rgba(239,68,68,1)" },
+    { key: "device_unique_pcs", label: "Device Unique PCs", color: "rgba(59,130,246,1)" },
+    { key: "device_after_hours", label: "Device After Hours", color: "rgba(244,63,94,1)" },
+    { key: "device_weekend_usage", label: "Device Weekend Usage", color: "rgba(234,179,8,1)" },
+    { key: "connect_disconnect_ratio", label: "Connect/Disconnect Ratio", color: "rgba(139,92,246,1)" },
+    { key: "avg_session_duration", label: "Avg Session Duration (hrs)", color: "rgba(6,182,212,1)" },
+    { key: "device_usage_per_day", label: "Device Usage/Day", color: "rgba(16,185,129,1)" },
   ];
 
   // Only include metrics with some non-zero value
@@ -62,7 +90,8 @@ const Charts = ({ logs }) => {
     datasets: [
       {
         label: "Anomalies (1 = Anomaly)",
-        data: logs.map((l) => (l.prediction === "Anomaly" ? 1 : 0)),
+        // ✅ FIXED: Support for both prediction_label text or numeric prediction value
+        data: logs.map((l) => (l.prediction_label === "Anomaly" || l.prediction === "Anomaly" || l.prediction === -1 ? 1 : 0)),
         backgroundColor: "rgba(239,68,68,0.8)",
       },
     ],

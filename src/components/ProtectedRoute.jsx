@@ -1,71 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
-
-const ProtectedRoute = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [authState, setAuthState] = useState("checking");
-  // checking | unauth | unverified | verified
+// 🔥 allowedRoles still supported
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading: contextLoading } = useAuth();
+  // checking | unauth | unverified | unauthorized | verified
 
   const location = useLocation();
 
-  // 1. Verify User Effect
-  useEffect(() => {
-    const verifyUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
+  // 1️⃣ Sync auth state from AuthContext (NO backend call here)
+  const authState = useMemo(() => {
+    if (contextLoading) return "checking";
+    if (!user) return "unauth";
+    if (!user.isEmailVerified) return "unverified";
 
-        // ❌ Not logged in
-        if (!token) {
-          setAuthState("unauth");
-          return;
-        }
+    const userRole = user.role || "user";
+    if (allowedRoles && !allowedRoles.includes(userRole))
+      return "unauthorized";
 
-        const res = await axios.get(`${API_BASE}/api/v1/getUserDetail`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    return "verified";
+  }, [user, contextLoading, allowedRoles]);
 
-        if (!res.data?.success) {
-          setAuthState("unauth");
-          return;
-        }
-
-        // 🚫 Logged in but email not verified
-        if (!res.data.user.isEmailVerified) {
-          setAuthState("unverified");
-          return;
-        }
-
-        // ✅ Verified
-        setAuthState("verified");
-      } catch {
-        setAuthState("unauth");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    verifyUser();
-  }, []); 
-
-  // 2. Handle Unverified User Toast
-  // We strictly watch authState. If it becomes 'unverified', we show the error.
+  // 2️⃣ Unverified Toast (UNCHANGED)
   useEffect(() => {
     if (authState === "unverified") {
       toast.error("Please verify your email to access this page", {
-        id: "verify-email-toast", // This ID prevents duplicate toasts
+        id: "verify-email-toast",
       });
     }
   }, [authState]);
 
-
   /* 🔄 Loading screen */
-  if (loading) {
+  if (contextLoading || authState === "checking") {
     return (
-      <div className="flex items-center justify-center min-h-screen font-semibold">
+      <div className="flex items-center justify-center w-full h-full overflow-hidden font-semibold">
         Checking authentication...
       </div>
     );
@@ -76,14 +46,24 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  /* 🚫 Logged in but NOT verified → Redirect to Home (BLOCK ACCESS) */
+  /* 🚫 Logged in but NOT verified → Redirect to Home */
   if (authState === "unverified") {
-    // We redirect to "/" (Home) or a specific "/verify-email" page.
-    // The useEffect above handles showing the toast message.
+    if (
+      location.pathname === "/" ||
+      location.pathname === "/verify-email"
+    ) {
+      return children;
+    }
+
     return <Navigate to="/" replace />;
   }
 
-  /* ✅ Verified → allow access */
+  /* 🛑 Wrong Role */
+  if (authState === "unauthorized") {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  /* ✅ Verified */
   return children;
 };
 

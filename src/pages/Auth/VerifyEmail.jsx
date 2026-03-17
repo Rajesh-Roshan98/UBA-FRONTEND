@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import { MailCheck, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { maskEmail } from "../../utils/maskData"; // 🔥 NEW: Imported masking utility
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL.replace(/\/$/, "");
-const COOLDOWN_TIME = 60;
+const COOLDOWN_TIME = 120; // 🔥 FIX 1: Changed to 120 seconds (2 minutes)
 
 const Spinner = () => (
   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -19,14 +19,15 @@ const VerifyEmail = () => {
   const { user, loading: authLoading, refreshUser } = useAuth();
 
   const email = location.state?.email || user?.email;
-  const initialOtpSent = location.state?.otpSent || false;
+  // 🔥 FIX 2: Default to true because Settings & Signup already sent the OTP before navigating here
+  const initialOtpSent = location.state?.otpSent ?? true;
 
   const [otp, setOtp] = useState(Array(6).fill(""));
   const [verifying, setVerifying] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(initialOtpSent);
   const [resendCooldown, setResendCooldown] = useState(
-    initialOtpSent ? COOLDOWN_TIME : 0
+    initialOtpSent ? COOLDOWN_TIME : 0,
   );
   const [pageReady, setPageReady] = useState(false);
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
@@ -40,7 +41,7 @@ const VerifyEmail = () => {
         toast.error("No email found");
         navigate("/", { replace: true });
       } else if (user?.isEmailVerified) {
-        toast.success("Email already verified");
+        toast.success("Email verified successfully.");
         navigate("/", { replace: true });
       } else {
         setPageReady(true);
@@ -66,7 +67,7 @@ const VerifyEmail = () => {
     if (!email || sendingOtp || resendCooldown > 0) return;
     try {
       setSendingOtp(true);
-      const res = await axios.post(`${API_BASE}/api/v1/sendotp`, { email });
+      const res = await api.post(`/api/v1/sendotp`, { email });
       toast.success(res.data.message || "OTP sent");
       setOtpSent(true);
       setResendCooldown(COOLDOWN_TIME);
@@ -88,7 +89,7 @@ const VerifyEmail = () => {
 
     try {
       setVerifying(true);
-      await axios.post(`${API_BASE}/api/v1/verifyotp`, {
+      await api.post(`/api/v1/verifyotp`, {
         email,
         otp: Number(finalOtp),
       });
@@ -107,7 +108,6 @@ const VerifyEmail = () => {
   /* ------------------- UI ------------------- */
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
-
       {/* MATRIX BACKGROUND (same as Login / Signup) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white" />
@@ -137,9 +137,7 @@ const VerifyEmail = () => {
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <ShieldCheck size={30} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Verify Email
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900">Verify Email</h2>
             <p className="text-sm text-slate-600 mt-1">
               Secure account verification
             </p>
@@ -148,7 +146,7 @@ const VerifyEmail = () => {
           {/* Email */}
           <input
             type="email"
-            value={email}
+            value={maskEmail(email)} // 🔥 NEW: Visually mask the email using the utility
             readOnly
             className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-600"
           />
@@ -175,25 +173,36 @@ const VerifyEmail = () => {
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
+            // 🔥 Conditionally disable the framer-motion hover/tap scaling if the button is disabled
+            whileHover={verifying || otp.join("").length !== 6 ? {} : { scale: 1.04 }}
+            whileTap={verifying || otp.join("").length !== 6 ? {} : { scale: 0.96 }}
             onClick={handleVerify}
-            disabled={!otpSent || verifying}
-            className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70"
+            // 🔥 FIX 3: Replaced the old broken logic with this clean check
+            disabled={verifying || otp.join("").length !== 6} 
+            // 🔥 ADDED: disabled:cursor-not-allowed and disabled:hover:bg-indigo-600
+            className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
           >
-            {verifying ? <><Spinner /> Verifying</> : "Verify Email"}
+            {verifying ? (
+              <>
+                <Spinner /> Verifying
+              </>
+            ) : (
+              "Verify Email"
+            )}
           </motion.button>
 
           <button
             onClick={sendOtp}
             disabled={sendingOtp || resendCooldown > 0}
-            className="w-full mt-4 text-sm text-indigo-600 hover:underline disabled:text-slate-400"
+            // 🔥 ADDED: disabled:cursor-not-allowed and disabled:no-underline
+            className="w-full mt-4 text-sm text-indigo-600 hover:underline disabled:text-slate-400 disabled:cursor-not-allowed disabled:no-underline"
           >
             {sendingOtp
               ? "Sending OTP..."
               : resendCooldown > 0
-              ? `Resend OTP in ${resendCooldown}s`
-              : "Resend OTP"}
+                // 🔥 FIX 4: Converted the raw seconds into a nice MM:SS visual format
+                ? `Resend OTP in ${Math.floor(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, "0")}` 
+                : "Resend OTP"}
           </button>
         </motion.div>
       </div>
@@ -216,6 +225,6 @@ const VerifyEmail = () => {
       )}
     </div>
   );
-}
+};
 
 export default VerifyEmail;

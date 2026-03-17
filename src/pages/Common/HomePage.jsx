@@ -104,27 +104,6 @@ export default function HomePage() {
                 in cloud environments.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    to="/dashboard"
-                    className="inline-flex justify-center items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/30 transition-colors duration-300 font-semibold text-base w-full sm:w-auto"
-                  >
-                    Open Dashboard
-                    <ArrowRight size={18} />
-                  </Link>
-                </motion.div>
-                
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    to="/logs"
-                    className="inline-flex justify-center items-center px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 transition-colors duration-300 font-medium shadow-sm w-full sm:w-auto"
-                  >
-                    View Live Logs
-                  </Link>
-                </motion.div>
-              </div>
-
             </motion.div>
 
             {/* RIGHT: FEATURE CARDS (Staggered Grid) */}
