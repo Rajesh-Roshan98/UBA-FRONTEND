@@ -138,7 +138,7 @@ const NotificationBell = () => {
                 </div>
                 <button
                   onClick={() => markAsRead(notif._id)}
-                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium"
+                  className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
                 >
                   Dismiss
                 </button>
@@ -150,7 +150,7 @@ const NotificationBell = () => {
           {notifications.length > 0 && (
             <button
               onClick={markAllAsRead}
-              className="w-full mt-1 text-xs text-center text-indigo-600 hover:text-indigo-800 py-1 font-medium"
+              className="w-full mt-1 text-xs text-center text-indigo-600 hover:text-indigo-800 py-1 font-medium cursor-pointer"
             >
               Mark all as read
             </button>

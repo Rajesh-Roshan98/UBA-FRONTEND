@@ -1,10 +1,10 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
+import { setNavigator } from "./services/navigationService"; // 🔥 NEW
 
 import Navbar from "./components/Navbar";
-import Dashboard from "./components/Dashboard";
-import LogsTable from "./components/LogsTable";
 import Charts from "./components/Charts";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Settings from "./components/Settings";
@@ -27,13 +27,12 @@ import {
   ContactUs,
   Insider,
   LearnMore,
-  NotFound,
+  ServerError,
   RTMonitoring,
   SCAnalytics,
   Unauthorized,
   ViewDemo,
 } from "./pages/Common";
-
 
 import {
   AccessControl,
@@ -90,6 +89,13 @@ const HomeGuard = ({ children }) => {
 };
 
 function App() {
+  const navigate = useNavigate(); // 🔥 Get navigate once
+
+  // 🔥 Set the global navigator for use outside React components
+  useEffect(() => {
+    setNavigator(navigate);
+  }, [navigate]);
+
   return (
     <div className="w-screen h-screen flex flex-col">
       {/* ✅ Toast must be mounted FIRST */}
@@ -123,21 +129,17 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/rt-monitoring" element={<RTMonitoring />} />
           <Route path="/sc-analytics" element={<SCAnalytics />} />
-          <Route path="/not-found" element={<NotFound />} />
+          <Route path="/server-error" element={<ServerError />} />
           <Route path="/check-activity" element={<CheckActivity />} />
 
 
           {/* Auth Pages */}
           <Route path="/login" element={ <PublicRoute> {" "} <Login />{" "} </PublicRoute> } />
           <Route path="/signup" element={ <PublicRoute> {" "} <Signup />{" "} </PublicRoute> } />
-
-          {/* Protected Pages (Accessible by any verified user) */}
-          <Route path="/dashboard" element={ <ProtectedRoute> {" "} <Dashboard />{" "} </ProtectedRoute> } />
-          <Route path="/logs" element={ <ProtectedRoute> {" "} <LogsTable />{" "} </ProtectedRoute> } />
-          <Route path="/charts" element={ <ProtectedRoute> {" "} <Charts />{" "} </ProtectedRoute> } />
-
+          
           {/* Admin ONLY Protected Pages */}
           <Route element={<AdminRoute />}>
+            <Route path="/charts" element={ <ProtectedRoute allowedRoles={["admin"]}> <Charts /> </ProtectedRoute> } />
             <Route path="/admin-dashboard" element={ <ProtectedRoute allowedRoles={["admin"]}> <AdminDashboard /> </ProtectedRoute> } />
             <Route path="/access-control" element={ <ProtectedRoute allowedRoles={["admin"]}> <AccessControl /> </ProtectedRoute> } />
             <Route path="/alerts" element={ <ProtectedRoute allowedRoles={["admin"]}> <Alerts /> </ProtectedRoute> } />

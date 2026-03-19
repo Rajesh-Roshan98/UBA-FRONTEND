@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { 
@@ -10,11 +10,15 @@ import {
 const Sidebar = ({ open, setOpen }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // Added: State for global animation
 
   // Handle logout and close sidebar simultaneously
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (isLoggingOut) return; // Added: Prevent double-click execution
+    setIsLoggingOut(true);    // Added: Trigger the global animation overlay
     setOpen(false); // Closes the sidebar
-    logout();      // Existing logout logic
+    await logout();      // Existing logout logic
+    setIsLoggingOut(false); // FIX: Reset animation state so it doesn't get stuck on the login page
   };
 
   const getLinks = () => {
@@ -27,7 +31,7 @@ const Sidebar = ({ open, setOpen }) => {
         { path: "/user-management", label: "User Management", icon: Users },
         { path: "/system-logs", label: "System Logs", icon: Database },
         { path: "/anomaly-review", label: "Anomaly Review", icon: AlertTriangle },
-        { path: "/model-results", label: "Model Results", icon: BarChart3 },
+        { path: "/alerts", label: "Alerts", icon: BarChart3 },
       ];
     } else if (user) {
       roleLinks = [
@@ -51,6 +55,14 @@ const Sidebar = ({ open, setOpen }) => {
 
   return (
     <>
+      {/* Added: Global Full-Page Logout Animation Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-indigo-900 font-medium animate-pulse tracking-wide">logging out...</p>
+        </div>
+      )}
+
       {/* Overlay with Blur */}
       {open && (
         <div
@@ -85,7 +97,7 @@ const Sidebar = ({ open, setOpen }) => {
 
         {/* User Profile Section */}
         {user && (
-          <div className="px-6 py-5">
+          <div className="px-6 py-3">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
               <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
                 {user.firstName?.[0]}{user.lastName?.[0]}
@@ -128,10 +140,15 @@ const Sidebar = ({ open, setOpen }) => {
           <div className="p-4 border-t border-slate-100">
             <button 
               onClick={handleLogout} // Updated this line
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              disabled={isLoggingOut} // Added: Disable button while logging out
+              className={`flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                isLoggingOut 
+                  ? 'opacity-50 cursor-not-allowed text-slate-600' 
+                  : 'text-slate-600 hover:text-red-600 hover:bg-red-50 cursor-pointer'
+              }`}
             >
               <LogOut size={18} />
-              Logout
+              Sign Out
             </button>
           </div>
         )}

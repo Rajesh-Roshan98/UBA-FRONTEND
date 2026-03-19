@@ -24,8 +24,13 @@ const SettingsPage = () => {
 
   // 🔥 NEW: Full page loading state
   const [pageLoading, setPageLoading] = useState(true);
+  
+  // Added: State for global logout animation
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    if (isLoggingOut) return; // Prevent double clicks
+    setIsLoggingOut(true);    // Trigger global animation overlay
     try {
       await api.post("/api/v1/logout").catch(() => {}); 
       await logout();
@@ -34,6 +39,7 @@ const SettingsPage = () => {
       toast.error("Failed to logout");
     } finally {
       navigate("/login", { replace: true });
+      setIsLoggingOut(false); // Reset animation state
     }
   };
 
@@ -602,100 +608,115 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="relative w-full min-h-[calc(100vh-3.5rem)] h-auto overflow-y-auto overflow-x-hidden bg-gray-100 p-4 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto w-full">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-500 mt-1">
-            Manage your account details and preferences.
-          </p>
+    <>
+      {/* Added: Global Full-Page Logout Animation Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-indigo-900 font-medium animate-pulse tracking-wide">logging out...</p>
         </div>
+      )}
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <nav className="flex flex-col p-2 space-y-1">
-                {tabs.map((tab) => (
+      <div className="relative w-full min-h-[calc(100vh-3.5rem)] h-auto overflow-y-auto overflow-x-hidden bg-gray-100 p-4 md:p-8 font-sans">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            <p className="text-gray-500 mt-1">
+              Manage your account details and preferences.
+            </p>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-64 flex-shrink-0">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <nav className="flex flex-col p-2 space-y-1">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                        activeTab === tab.id
+                          ? "bg-blue-50 text-blue-600 shadow-sm"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <tab.icon
+                        size={18}
+                        className={`mr-3 ${activeTab === tab.id ? "text-blue-600" : "text-gray-400"}`}
+                      />
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+                <div className="p-4 border-t border-gray-100 mt-2">
                   <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                      activeTab === tab.id
-                        ? "bg-blue-50 text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut} // Disable button while logging out
+                    className={`flex items-center text-sm font-medium w-full px-2 py-2 rounded-lg transition ${
+                      isLoggingOut
+                        ? "text-gray-400 cursor-not-allowed opacity-50"
+                        : "text-red-600 hover:text-red-700 hover:bg-red-50"
                     }`}
                   >
-                    <tab.icon
-                      size={18}
-                      className={`mr-3 ${activeTab === tab.id ? "text-blue-600" : "text-gray-400"}`}
-                    />
-                    {tab.label}
+                    <LogOut size={18} className="mr-3" /> Sign Out
                   </button>
-                ))}
-              </nav>
-              <div className="p-4 border-t border-gray-100 mt-2">
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                {renderContent()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔥 NEW: Delete Confirmation Modal with backdrop blur */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop with blur */}
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => !deletingAccount && setShowDeleteConfirm(false)}
+            ></div>
+            {/* Modal */}
+            <div className="relative bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Are you sure?
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                This action cannot be undone. This will permanently delete your
+                account and remove all associated data.
+              </p>
+              <div className="flex justify-end gap-3">
                 <button
-                  onClick={handleLogout}
-                  className="flex items-center text-red-600 hover:text-red-700 text-sm font-medium w-full px-2 py-2 rounded-lg hover:bg-red-50 transition"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deletingAccount}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <LogOut size={18} className="mr-3" /> Sign Out
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {deletingAccount ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Yes, Delete"
+                  )}
                 </button>
               </div>
             </div>
           </div>
-
-          <div className="flex-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-              {renderContent()}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* 🔥 NEW: Delete Confirmation Modal with backdrop blur */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop with blur */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => !deletingAccount && setShowDeleteConfirm(false)}
-          ></div>
-          {/* Modal */}
-          <div className="relative bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Are you sure?
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              This action cannot be undone. This will permanently delete your
-              account and remove all associated data.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deletingAccount}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deletingAccount}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {deletingAccount ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  "Yes, Delete"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

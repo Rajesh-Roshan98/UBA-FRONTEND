@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import Charts from "../../components/Charts";
 import { 
@@ -6,6 +8,9 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+
   // === Existing UBA Stats State ===
   const [stats, setStats] = useState({
     total: 0,
@@ -31,6 +36,7 @@ const AdminDashboard = () => {
   // Load data ONCE
   useEffect(() => {
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Disable scroll ONLY while charts are rendering
@@ -69,6 +75,19 @@ const AdminDashboard = () => {
 
     } catch (err) {
       console.error("Failed to load stats:", err);
+      
+      // 🔥 NEW: Error handling navigation logic (Matching AdminHomePage)
+      if (err.response) {
+        const status = err.response.status;
+        // Route authentication/authorization errors to unauthorized page
+        if (status === 401 || status === 403 || status === 404) {
+          navigate('/unauthorized');
+        } 
+        // Route server errors to not found page
+        else if (status >= 500) {
+          navigate('/server-error');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -156,30 +175,6 @@ const AdminDashboard = () => {
         
         {/* All 6 cards in a single grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
-          <StatCard
-            icon={AlertTriangle}
-            title="Critical Alerts"
-            value={adminStats.criticalAlerts}
-            colorClass="text-red-600"
-            bgClass="bg-red-100"
-            hoverEffect={true}
-          />
-          <StatCard
-            icon={Users}
-            title="Active Sessions"
-            value={adminStats.activeSessions}
-            colorClass="text-blue-600"
-            bgClass="bg-blue-100"
-            hoverEffect={true}
-          />
-          <StatCard
-            icon={Database}
-            title="Data Monitored"
-            value={adminStats.dataTransferred}
-            colorClass="text-green-600"
-            bgClass="bg-green-100"
-            hoverEffect={true}
-          />
           <StatCard
             icon={Activity}
             title="Total Activities"

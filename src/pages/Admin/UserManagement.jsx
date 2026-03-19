@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, UserPlus, MoreVertical, Edit, Trash2, Shield, Download } from 'lucide-react';
 
 const UserManagement = () => {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+  
+  // 🔥 NEW: Added loading state to match AdminHomePage
+  const [loading, setLoading] = useState(true);
+
   const [users, setUsers] = useState([
     {
       id: 1,
@@ -63,6 +71,38 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
 
+  // 🔥 NEW: Added the data fetching structure with the error routing logic
+  useEffect(() => {
+    const fetchUsersData = async () => {
+      try {
+        setLoading(true);
+        
+        // Future API call will go here when you connect it to the backend
+        // const res = await api.get('/api/users');
+        
+      } catch (error) {
+        console.error("Failed to fetch users data:", error);
+        
+        // Error handling navigation logic (Matching AdminHomePage)
+        if (error.response) {
+          const status = error.response.status;
+          // Route authentication/authorization errors to unauthorized page
+          if (status === 401 || status === 403 || status === 404) {
+            navigate('/unauthorized');
+          } 
+          // Route server errors to not found page
+          else if (status >= 500) {
+            navigate('/server-error');
+          }
+        }
+      } finally {
+        setLoading(false); // Removes the loader once data is ready
+      }
+    };
+
+    fetchUsersData();
+  }, [navigate]);
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -85,6 +125,18 @@ const UserManagement = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // 🔥 NEW: Clean, static loading animation exactly like AdminHomePage
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-gray-500">
+          Loading User Management...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -148,7 +200,7 @@ const UserManagement = () => {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">User</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Role & Department</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Risk Score</th>
-                <th className="px6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Last Active</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Access Level</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>

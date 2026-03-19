@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
 
 function SystemLogs() {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,6 +28,7 @@ function SystemLogs() {
 
   useEffect(() => {
     fetchLogs(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchLogs = async (showLoader = false) => {
@@ -32,6 +38,19 @@ function SystemLogs() {
       setLogs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to fetch logs:", err);
+      
+      // 🔥 NEW: Error handling navigation logic (Matching AdminHomePage)
+      if (err.response) {
+        const status = err.response.status;
+        // Route authentication/authorization errors to unauthorized page
+        if (status === 401 || status === 403 || status === 404) {
+          navigate('/unauthorized');
+        } 
+        // Route server errors to not found page
+        else if (status >= 500) {
+          navigate('/server-error');
+        }
+      }
     } finally {
       if (showLoader) setLoading(false);
     }
@@ -56,14 +75,26 @@ function SystemLogs() {
   const indexOfFirst = indexOfLast - rowsPerPage;
   const currentLogs = filteredLogs.slice(indexOfFirst, indexOfLast);
 
+  // 🔥 NEW: Full page loader matching AdminHomePage style
+  if (loading && logs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-gray-500">
+          Loading System Logs...
+        </p>
+      </div>
+    );
+  }
+
   return (
     // ✅ Keep relative here so that children with 'absolute' stay inside this box
     <div className="relative p-6 bg-gray-100 w-full h-full overflow-hidden flex flex-col space-y-4">
       
-      {loading && (
-        // ✅ Changed 'fixed' to 'absolute' so it doesn't cover the Sidebar
+      {/* Background/overlay loader for quick refreshes */}
+      {loading && logs.length > 0 && (
         <div className="absolute inset-0 bg-white/20 backdrop-blur-sm z-30 flex items-center justify-center">
-          <div className="h-14 w-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 

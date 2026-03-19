@@ -2,7 +2,7 @@ export { default as AboutUs } from "./AboutUs";
 export { default as ContactUs } from "./ContactUs";
 export { default as Insider } from "./Insider";
 export { default as LearnMore } from "./LearnMore";
-export { default as NotFound } from "./NotFound";
+export { default as ServerError } from "./ServerError";
 export { default as RTMonitoring } from "./RTMonitoring";
 export { default as SCAnalytics } from "./SCAnalytics";
 export { default as Unauthorized } from "./Unauthorized";

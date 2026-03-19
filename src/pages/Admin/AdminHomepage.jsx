@@ -89,6 +89,19 @@ const AdminHomePage = () => {
 
       } catch (error) {
         console.error("Failed to fetch admin dashboard data:", error);
+        
+        // 🔥 NEW: Error handling navigation logic
+        if (error.response) {
+          const status = error.response.status;
+          // Route authentication/authorization errors to unauthorized page
+          if (status === 401 || status === 403 || status === 404) {
+            navigate('/unauthorized');
+          } 
+          // Route server errors to not found page
+          else if (status >= 500) {
+            navigate('/server-error');
+          }
+        }
       } finally {
         setLoading(false);
       }

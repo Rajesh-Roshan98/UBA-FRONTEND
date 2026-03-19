@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useRef } from "react";
 import api from "../services/api";
 
 const AuthContext = createContext(null);
@@ -28,6 +28,9 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("getUserFromServer error:", err);
+      if (!err.response || err.response.status >= 500) {
+        throw err;
+      }
     }
 
     return null;
@@ -36,6 +39,7 @@ export const AuthProvider = ({ children }) => {
   /* ================= LOAD USER ON APP START ================= */
   useEffect(() => {
     let isMounted = true;
+    let safetyTimeout; // 🔥 Timeout to prevent hanging if redirect fails
 
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
@@ -48,6 +52,8 @@ export const AuthProvider = ({ children }) => {
         }
         return;
       }
+
+      let isFatalError = false; // 🔥 NEW: Track fatal errors to prevent race condition
 
       try {
         const fetchedUser = await getUserFromServer();
@@ -63,11 +69,31 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error("Auth fetchUser error:", err);
+
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          setUser(null);
+        } else {
+          isFatalError = true; // 🔥 Set flag so we don't drop the loading state
+          // Redirect is now handled centrally by the API interceptor
+
+          // 🔥 Safety timeout: if redirect doesn't happen (e.g., isRedirecting blocked),
+          // force loading to false after 5 seconds to prevent permanent spinner.
+          safetyTimeout = setTimeout(() => {
+            if (isMounted) {
+              setLoading(false);
+            }
+          }, 5000);
+        }
       } finally {
-        if (isMounted) {
+        // 🔥 FIX: Only stop loading if it wasn't a fatal error
+        // This prevents ProtectedRoute from kicking you to /login before the redirect finishes!
+        if (isMounted && !isFatalError) {
           setLoading(false);
           setIsInitialized(true);
         }
+        // Note: If isFatalError is true, loading remains true; the safety timeout will eventually reset it.
       }
     };
 
@@ -75,6 +101,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       isMounted = false;
+      if (safetyTimeout) clearTimeout(safetyTimeout); // 🔥 Clean up timeout on unmount
     };
   }, []);
 
@@ -83,6 +110,8 @@ export const AuthProvider = ({ children }) => {
     if (!token) return;
     localStorage.setItem("token", token);
     setLoading(true);
+
+    let isFatalError = false; // 🔥 NEW: Track fatal errors here too
 
     try {
       // 🔥 Replaced manual URL/Headers with the Interceptor-friendly call
@@ -106,9 +135,16 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       } else {
         console.warn("Temporary login error.");
+        if (!err.response || err.response.status >= 500) {
+          isFatalError = true; // 🔥 Set flag
+          // Redirect is now handled centrally by the API interceptor
+        }
       }
     } finally {
-      setLoading(false);
+      // 🔥 FIX: Keep loading true if redirecting to server-error
+      if (!isFatalError) {
+        setLoading(false);
+      }
     }
   };
 
@@ -147,6 +183,14 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Auth refreshUser error:", err);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        setUser(null);
+      } else {
+        // Redirect is now handled centrally by the API interceptor
+      }
     }
 
     return null;

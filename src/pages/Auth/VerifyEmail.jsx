@@ -157,14 +157,16 @@ const VerifyEmail = () => {
               <input
                 key={index}
                 ref={(el) => (inputsRef.current[index] = el)}
-                maxLength="1"
                 value={digit}
+                onFocus={(e) => e.target.select()} // 🔥 NEW: Auto-selects text when tapped
                 onChange={(e) => {
-                  if (!/^\d?$/.test(e.target.value)) return;
+                  // 🔥 NEW: Grabs the last typed character so users can overwrite instantly
+                  const val = e.target.value.slice(-1); 
+                  if (!/^\d?$/.test(val)) return;
                   const updated = [...otp];
-                  updated[index] = e.target.value;
+                  updated[index] = val;
                   setOtp(updated);
-                  if (e.target.value && index < 5)
+                  if (val && index < 5)
                     inputsRef.current[index + 1]?.focus();
                 }}
                 className="w-10 h-12 text-center text-lg font-semibold rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"

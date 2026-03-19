@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../../index.css";
 import api from "../../services/api";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
@@ -89,7 +89,7 @@ const Login = () => {
       }
 
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Invalid credentials or server error";
+      const errorMsg = err.response?.data?.message || "Invalid credentials";
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -212,7 +212,6 @@ const Login = () => {
                 transition disabled:opacity-70 cursor-pointer"
               >
                 {loading ? "Authenticating..." : "Login"}
-                <ArrowRight size={18} />
               </motion.button>
             </motion.form>
 

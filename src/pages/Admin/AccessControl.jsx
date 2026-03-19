@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from 'react-router-dom';
 import { Lock, Unlock, Eye, EyeOff, Filter, Plus, Search, Download } from 'lucide-react';
 
 const AccessControl = () => {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+
+  // 🔥 NEW: Added loading state to match AdminHomePage
+  const [loading, setLoading] = useState(true);
+
   const [permissions, setPermissions] = useState([
     {
       id: 1,
@@ -82,6 +90,38 @@ const AccessControl = () => {
     expiryDate: ''
   });
 
+  // 🔥 NEW: Added the data fetching structure with the error routing logic
+  useEffect(() => {
+    const fetchAccessData = async () => {
+      try {
+        setLoading(true);
+        
+        // Future API call will go here when you connect it to the backend
+        // const res = await api.get('/api/access-control');
+        
+      } catch (error) {
+        console.error("Failed to fetch access control data:", error);
+        
+        // Error handling navigation logic (Matching AdminHomePage)
+        if (error.response) {
+          const status = error.response.status;
+          // Route authentication/authorization errors to unauthorized page
+          if (status === 401 || status === 403 || status === 404) {
+            navigate('/unauthorized');
+          } 
+          // Route server errors to not found page
+          else if (status >= 500) {
+            navigate('/server-error');
+          }
+        }
+      } finally {
+        setLoading(false); // Removes the loader once data is ready
+      }
+    };
+
+    fetchAccessData();
+  }, [navigate]);
+
   const handleAddPermission = () => {
     const permission = {
       id: permissions.length + 1,
@@ -100,6 +140,18 @@ const AccessControl = () => {
       expiryDate: ''
     });
   };
+
+  // 🔥 NEW: Clean, static loading animation exactly like AdminHomePage
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-gray-500">
+          Loading Access Control...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

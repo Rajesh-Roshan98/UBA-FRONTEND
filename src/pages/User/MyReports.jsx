@@ -25,7 +25,7 @@ export default function MyReports() {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           navigate('/unauthorized');
         } else {
-          navigate('/not-found');
+          navigate('/server-error');
         }
       } finally {
         setLoading(false);

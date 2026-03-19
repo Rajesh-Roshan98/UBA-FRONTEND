@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Bell, CheckCircle, XCircle, Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from "../../services/api"; // 🔥 Imported centralized API instance
 
@@ -9,6 +11,9 @@ const SEV_COLORS = { critical: 'bg-red-100 text-red-800', high: 'bg-orange-100 t
 const STAT_COLORS = { open: 'bg-red-100 text-red-800', 'in-progress': 'bg-yellow-100 text-yellow-800', investigating: 'bg-yellow-100 text-yellow-800', pending: 'bg-yellow-100 text-yellow-800', resolved: 'bg-green-100 text-green-800', closed: 'bg-gray-100 text-gray-800', 'false-positive': 'bg-gray-100 text-gray-800' };
 
 const Alerts = () => {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,6 +51,19 @@ const Alerts = () => {
     } catch (err) {
       console.error("Error fetching alerts:", err);
       setError("An error occurred while fetching alerts.");
+      
+      // 🔥 NEW: Error handling navigation logic (Matching AdminHomePage)
+      if (err.response) {
+        const status = err.response.status;
+        // Route authentication/authorization errors to unauthorized page
+        if (status === 401 || status === 403 || status === 404) {
+          navigate('/unauthorized');
+        } 
+        // Route server errors to not found page
+        else if (status >= 500) {
+          navigate('/server-error');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -157,7 +175,13 @@ const Alerts = () => {
       {error && <div className="p-4 bg-red-100 text-red-700 rounded-lg">{error}</div>}
       
       {loading ? (
-        <div className="text-center py-10 text-gray-500">Loading alerts...</div>
+        // 🔥 NEW: AdminHomePage-style loading animation (replacing plain text loader)
+        <div className="flex flex-col items-center justify-center py-20 w-full bg-white/50 backdrop-blur-md rounded-xl shadow-md border border-gray-100">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm font-medium text-gray-500">
+            Loading Alerts...
+          </p>
+        </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg">
           <div className="overflow-x-auto">

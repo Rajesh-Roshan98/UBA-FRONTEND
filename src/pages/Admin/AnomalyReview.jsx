@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 NEW: Imported useNavigate for error redirection
+import { useNavigate } from 'react-router-dom';
 import { Activity, AlertTriangle, Eye, CheckCircle, XCircle, Download, RefreshCw, ChevronLeft, ChevronRight, HardDrive } from 'lucide-react';
 import api from "../../services/api"; // 🔥 Imported centralized API instance
 
@@ -8,6 +10,9 @@ const SCORE_COLORS = (s) => s >= 80 ? 'bg-red-100 text-red-800' : s >= 60 ? 'bg-
 const STATUS_COLORS = { pending: 'bg-yellow-100 text-yellow-800', open: 'bg-yellow-100 text-yellow-800', investigating: 'bg-blue-100 text-blue-800', reviewed: 'bg-purple-100 text-purple-800', confirmed: 'bg-green-100 text-green-800', 'false-positive': 'bg-gray-100 text-gray-800' };
 
 const AnomalyReview = () => {
+  // 🔥 NEW: Initialize navigate
+  const navigate = useNavigate();
+
   const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('all');
@@ -44,6 +49,19 @@ const AnomalyReview = () => {
       }
     } catch (err) { 
       console.error(err); 
+      
+      // 🔥 NEW: Error handling navigation logic (Matching AdminHomePage)
+      if (err.response) {
+        const status = err.response.status;
+        // Route authentication/authorization errors to unauthorized page
+        if (status === 401 || status === 403 || status === 404) {
+          navigate('/unauthorized');
+        } 
+        // Route server errors to not found page
+        else if (status >= 500) {
+          navigate('/server-error');
+        }
+      }
     } finally { 
       setLoading(false); 
     }
@@ -77,6 +95,18 @@ const AnomalyReview = () => {
     confirmed: anomalies.filter(a => a.status === 'confirmed').length
   };
   const uniqueTypes = [...new Set(anomalies.map(a => a.type))];
+
+  // 🔥 NEW: Clean, static loading animation exactly like AdminHomePage
+  if (loading && anomalies.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-gray-500">
+          Loading Anomaly Review...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -126,8 +156,7 @@ const AnomalyReview = () => {
                   <tr>{["Anomaly", "User Email", "Risk Score", "Status", "Actions"].map(h => <th key={h} className="px-6 py-3 text-left text-sm font-semibold text-gray-900">{h}</th>)}</tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {loading ? <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-500">Loading...</td></tr> : 
-                   currentAnomalies.length === 0 ? <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-500">No anomalies found.</td></tr> :
+                  {currentAnomalies.length === 0 ? <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-500">No anomalies found.</td></tr> :
                    currentAnomalies.map(a => (
                     <tr key={a.id} className={`hover:bg-gray-50 cursor-pointer ${selectedAnomaly?.id === a.id ? 'bg-blue-50' : ''}`} onClick={() => setSelectedAnomaly(a)}>
                       <td className="px-6 py-4"><div><div className="font-medium">{a.type}</div><div className="text-xs text-gray-400 mt-1">{a.timestamp}</div></div></td>
