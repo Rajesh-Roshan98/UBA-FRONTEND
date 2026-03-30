@@ -118,7 +118,7 @@ function SystemLogs() {
 
             <div className="p-8 space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <DetailBox label="Risk Score" value={`${selectedUser.risk_score || 0}/100`} isRed={selectedUser.risk_score > 70} isOrange={selectedUser.risk_score > 40 && selectedUser.risk_score <= 70} />
+                <DetailBox label="Risk Score" value={`${selectedUser.risk_score ? selectedUser.risk_score.toFixed(2) : 0}/100`} isRed={selectedUser.risk_score > 70} isOrange={selectedUser.risk_score > 40 && selectedUser.risk_score <= 70} />
                 <DetailBox label="Severity" value={selectedUser.severity || "Low"} isSeverity />
                 <DetailBox label="Anomaly Score" value={selectedUser.anomaly_score ? selectedUser.anomaly_score.toFixed(2) : 0} />
                 <DetailBox label="Prediction Status" value={selectedUser.prediction_label || (selectedUser.prediction === -1 ? 'Anomaly' : selectedUser.prediction === 1 ? 'Normal' : selectedUser.prediction)} isStatus />
@@ -187,7 +187,7 @@ function SystemLogs() {
 
       {/* Main Table View Header */}
       <div className="flex-shrink-0 z-20 bg-gray-100 space-y-3">
-        <h2 className="text-2xl font-bold text-gray-800">User Activity Logs</h2>
+        <h2 className="text-2xl font-bold text-gray-800">System Logs</h2>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
           <div className="flex items-center space-x-2">
             <select
@@ -278,7 +278,7 @@ function SystemLogs() {
                     <td className="p-4 text-gray-600 font-medium">{log.role}</td>
                     <td className="p-4">
                       <span className={`font-mono font-bold ${log.risk_score > 70 ? 'text-red-600' : log.risk_score > 40 ? 'text-orange-500' : 'text-gray-600'}`}>
-                        {log.risk_score || 0}
+                        {log.risk_score ? log.risk_score.toFixed(2) : 0}
                       </span>
                     </td>
                     <td className="p-4">

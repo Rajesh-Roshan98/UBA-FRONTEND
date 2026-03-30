@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { KeyRound, ShieldCheck, Lock, MailCheck } from "lucide-react";
+import { KeyRound, ShieldCheck, Lock, MailCheck, Eye, EyeOff } from "lucide-react"; // 👁️ added Eye icons
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom"; 
@@ -30,6 +30,10 @@ const ForgotPassword = () => {
   const inputsRef = useRef([]);
 
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
+  
+  // 👁️ State for password visibility toggles
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // UI States
   const [isLoading, setIsLoading] = useState(false);
@@ -280,7 +284,7 @@ const ForgotPassword = () => {
               </form>
             )}
 
-            {/* Step 3: Set New Password */}
+            {/* Step 3: Set New Password (with eye icons) */}
             {step === 'reset' && (
               <form onSubmit={handleResetPassword} noValidate>
                 <div className="text-center mb-6">
@@ -293,22 +297,42 @@ const ForgotPassword = () => {
                   </p>
                 </div>
 
+                {/* New Password field with eye toggle */}
                 <div className="relative w-full mb-4">
                   <input 
-                    type="password" 
+                    type={showNewPassword ? "text" : "password"} 
                     placeholder="New Password (min 8 chars)" 
+                    value={passwords.new}
                     onChange={(e) => setPasswords({...passwords, new: e.target.value})} 
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 bg-white"
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 bg-white"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-indigo-600 focus:outline-none"
+                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
                 
+                {/* Confirm Password field with eye toggle */}
                 <div className="relative w-full mb-6">
                   <input 
-                    type="password" 
+                    type={showConfirmPassword ? "text" : "password"} 
                     placeholder="Confirm Password" 
+                    value={passwords.confirm}
                     onChange={(e) => setPasswords({...passwords, confirm: e.target.value})} 
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 bg-white"
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 bg-white"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-indigo-600 focus:outline-none"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
 
                 <motion.button

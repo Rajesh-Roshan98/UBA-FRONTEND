@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast'; 
 import api from "../../services/api";
 
-export default function Activity() {
+const Activity = () => {
   const navigate = useNavigate(); 
   const [activityData, setActivityData] = useState({ timeline: [], accessLogs: [] });
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,13 @@ export default function Activity() {
     const fetchActivityData = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/api/user/uactivity`);
+        
+        // 🔥 FIX: Grab the browser's local timezone (e.g., "Asia/Kolkata" or "America/New_York")
+        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // 🔥 FIX: Send the timezone to the backend
+        const response = await api.get(`/api/user/uactivity?tz=${userTz}`);
+        
         setActivityData(response.data);
       } catch (err) {
         console.error("Error fetching activity data:", err);
@@ -92,11 +98,14 @@ export default function Activity() {
     return Server; // Fallback icon
   };
 
+  // 🎨 UI MATCH: Updated loading spinner to match the Dashboard's blue/white styling perfectly
   if (loading) {
     return (
-      <div className="w-full h-full overflow-hidden bg-gray-900 flex flex-col items-center justify-center text-gray-400">
-        <Loader className="animate-spin mb-4" size={32} />
-        <p>Loading activity monitor...</p>
+      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-medium text-gray-500">
+          Loading activity monitor...
+        </p>
       </div>
     );
   }
@@ -124,19 +133,26 @@ export default function Activity() {
   };
 
   return (
-    // 🔥 UPDATED: Added overflow-x-hidden to prevent horizontal scrolling bugs entirely
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 overflow-x-hidden">
+    // 🎨 UI MATCH: Updated main background to bg-gray-100 and text to dark colors
+    <div className="min-h-screen bg-gray-100 p-6 overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        <h1 className="text-3xl font-bold text-white mb-8">Activity Monitor</h1>
+        {/* 🎨 UI MATCH: Header styling */}
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Activity Monitor</h1>
+            <p className="text-gray-600 mt-1">Track your recent actions and resource usage.</p>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           
           {/* Timeline Section */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full">
+          {/* 🎨 UI MATCH: Changed to white card with shadow-md */}
+          <div className="bg-white rounded-xl shadow-md p-6 w-full relative overflow-hidden">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-                <ActivityIcon className="text-blue-500" size={20} /> 
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <ActivityIcon className="text-blue-600" size={20} /> 
                 {getTimelineHeader()}
               </h3>
               
@@ -150,17 +166,19 @@ export default function Activity() {
                     setShowFullTimeline(false); 
                     setShowFullLogs(false);     
                   }}
-                  className="bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3 py-1.5 transition-colors cursor-pointer"
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  // 🎨 UI MATCH: Updated to light theme input, removed [color-scheme:dark]
+                  className="bg-white hover:bg-gray-50 border border-gray-300 hover:border-gray-400 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3 py-1.5 transition-all duration-200 ease-in-out cursor-pointer shadow-sm [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 />
               </div>
             </div>
             
             {displayedTimeline.length > 0 ? (
               <>
-                <div className="relative pl-4 border-l border-gray-700 space-y-4">
+                <div className="relative pl-4 border-l border-gray-200 space-y-6 mt-4">
                   {displayedTimeline.map((item, idx) => (
                     <div key={idx} className="relative pl-6">
-                      <div className={`absolute -left-[21px] top-1 w-4 h-4 rounded-full border-2 border-gray-900 ${
+                      <div className={`absolute -left-[21px] top-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${
                         item.status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
                       }`}></div>
                       
@@ -168,8 +186,8 @@ export default function Activity() {
                         {/* 🔥 CHANGED HERE: Extracting from item.timestamp instead of item.time */}
                         {formatTime(item.timestamp)}
                       </span>
-                      <h4 className="text-gray-200 font-medium">{item.action}</h4>
-                      <p className="text-sm text-gray-400 mt-1">{item.details}</p>
+                      <h4 className="text-gray-800 font-bold">{item.action}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{item.details}</p>
                     </div>
                   ))}
                 </div>
@@ -177,45 +195,49 @@ export default function Activity() {
                 {filteredTimeline.length > 5 && (
                   <button 
                     onClick={() => setShowFullTimeline(!showFullTimeline)}
-                    className="w-full mt-6 py-3 rounded-lg border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white transition-all text-sm flex items-center justify-center gap-2"
+                    // 🎨 UI MATCH: Light theme button styling with blue hover text
+                    className="w-full mt-8 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-blue-600 transition-all text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {showFullTimeline ? 'View Less' : `View Full Timeline (${filteredTimeline.length})`} <ArrowUpRight size={16} />
                   </button>
                 )}
               </>
             ) : (
-              <p className="text-gray-500 text-sm text-center py-8">
-                No activity detected for this date.
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200 mt-4">
+                <ActivityIcon size={32} className="mb-3 text-gray-300" />
+                <p className="text-sm font-medium">No activity detected for this date.</p>
+              </div>
             )}
           </div>
 
           {/* Access Logs Section */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full">
-            <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-              <Server className="text-purple-500" size={20} /> Resource Access
+          {/* 🎨 UI MATCH: Changed to white card with shadow-md */}
+          <div className="bg-white rounded-xl shadow-md p-6 w-full relative overflow-hidden">
+            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <Server className="text-purple-600" size={20} /> Resource Access
             </h3>
 
             {displayedLogs.length > 0 ? (
               <>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {displayedLogs.map((log, idx) => {
                     const IconComponent = getIconForResource(log.type);
                     
                     return (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg hover:bg-gray-900/80 transition-colors group">
+                      // 🎨 UI MATCH: Updated hover states and card styling for inner lists
+                      <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group">
                         <div className="flex items-center gap-4">
-                          <div className="p-2 bg-gray-800 rounded-lg text-gray-400 group-hover:text-white transition-colors">
-                            <IconComponent size={18} />
+                          <div className="p-2.5 bg-white shadow-sm border border-gray-100 rounded-xl text-gray-500 group-hover:text-blue-600 group-hover:scale-110 transition-all">
+                            <IconComponent size={20} />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-200">{log.resource}</p>
-                            <p className="text-xs text-gray-500">{log.type}</p>
+                            <p className="font-bold text-gray-800">{log.resource}</p>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mt-0.5">{log.type}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-gray-300">{log.count}</p>
-                          <p className="text-xs text-gray-500">{formatTimeAgo(log.last)}</p>
+                          <p className="text-sm font-bold text-gray-800">{log.count}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{formatTimeAgo(log.last)}</p>
                         </div>
                       </div>
                     );
@@ -225,14 +247,18 @@ export default function Activity() {
                 {accessLogs.length > 5 && (
                   <button 
                     onClick={() => setShowFullLogs(!showFullLogs)}
-                    className="w-full mt-6 py-3 rounded-lg border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white transition-all text-sm flex items-center justify-center gap-2"
+                    // 🎨 UI MATCH: Light theme button styling
+                    className="w-full mt-6 py-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-purple-600 transition-all text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {showFullLogs ? 'View Less' : `View Full Logs (${accessLogs.length})`} <ArrowUpRight size={16} />
                   </button>
                 )}
               </>
             ) : (
-              <p className="text-gray-500 text-sm text-center py-8">No resource access logs available.</p>
+               <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200 mt-4">
+                 <Server size={32} className="mb-3 text-gray-300" />
+                 <p className="text-sm font-medium">No resource access logs available.</p>
+               </div>
             )}
           </div>
 
@@ -241,3 +267,5 @@ export default function Activity() {
     </div>
   );
 }
+
+export default Activity;

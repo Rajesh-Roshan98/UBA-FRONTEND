@@ -255,61 +255,6 @@ const AdminDashboard = () => {
               </button>
             </div>
           )}
-
-          {/* 🧾 RECENT ACTIVITIES TABLE */}
-          {paginatedLogs.length > 0 && (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <h4 className="text-lg font-bold text-gray-800 mb-4">Recent Activity Logs</h4>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50/80 border-y border-gray-200 text-left">
-                      {/* ✅ ADDED: Device Activity to the table headers */}
-                      {["User ID", "Actions/Hr", "Login Count", "File Access", "Decoy Access", "Device Activity", "Prediction"].map(
-                        (h) => (
-                          <th key={h} className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">{h}</th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100 border-b border-gray-200">
-                    {paginatedLogs.map((log, i) => {
-                      // ✅ FIX: Determine anomaly status dynamically to support old and new data records
-                      const isAnomaly = log.prediction_label === "Anomaly" || log.prediction === "Anomaly" || log.prediction === -1;
-                      const displayPrediction = log.prediction_label || (log.prediction === -1 ? "Anomaly" : log.prediction === 1 ? "Normal" : log.prediction);
-
-                      return (
-                        <tr
-                          key={i}
-                          className={`transition hover:bg-gray-50 text-sm ${
-                            isAnomaly ? "bg-red-50/40" : "bg-white"
-                          }`}
-                        >
-                          <td className="px-6 py-4 font-medium text-gray-900">{log.user_id}</td>
-                          <td className="px-6 py-4 text-gray-600">{log.actions_per_hour || 0}</td>
-                          <td className="px-6 py-4 text-gray-600">{log.login_count || 0}</td>
-                          <td className="px-6 py-4 text-gray-600">{log.file_access_count || 0}</td>
-                          <td className="px-6 py-4 text-gray-600">{log.decoy_access_count || 0}</td>
-                          <td className="px-6 py-4 text-gray-600">{log.device_activity_count || 0}</td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
-                              isAnomaly 
-                                ? "bg-red-100 text-red-700" 
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}>
-                              {displayPrediction}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

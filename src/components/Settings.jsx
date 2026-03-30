@@ -505,8 +505,11 @@ const SettingsPage = () => {
                       )}
                     </div>
 
+                    {/* 🔥 UPDATED: Added a sort operation here to ensure current device is always first in the list */}
                     {sessions.length > 0 ? (
-                      sessions.map((session, idx) => (
+                      [...sessions]
+                        .sort((a, b) => (b.current ? 1 : 0) - (a.current ? 1 : 0))
+                        .map((session, idx) => (
                         <div key={session.id || idx} className="flex flex-col sm:flex-row justify-between sm:items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm gap-3">
                           <div>
                             <p className="font-medium text-gray-800 text-sm">
@@ -618,7 +621,7 @@ const SettingsPage = () => {
       )}
 
       <div className="relative w-full min-h-[calc(100vh-3.5rem)] h-auto overflow-y-auto overflow-x-hidden bg-gray-100 p-4 md:p-8 font-sans">
-        <div className="max-w-5xl mx-auto w-full">
+        <div className="max-w-7xl mx-auto w-full">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
             <p className="text-gray-500 mt-1">

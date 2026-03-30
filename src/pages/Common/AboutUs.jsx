@@ -233,7 +233,7 @@ export default function AboutUs() {
             <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100 z-10">
               <p className="font-semibold text-indigo-600">Rajesh Roshan</p>
               <p className="text-slate-600 text-sm">
-                Frontend & Backend Development
+                Machine Learning & UBA Model
               </p>
             </div>
 
@@ -242,14 +242,14 @@ export default function AboutUs() {
                 S. Ganesh Kumar Prusty
               </p>
               <p className="text-slate-600 text-sm">
-                Machine Learning & UBA Model
+                Backend Development
               </p>
             </div>
 
             <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100 z-10">
               <p className="font-semibold text-indigo-600">Om Gouda</p>
               <p className="text-slate-600 text-sm">
-                Data Analysis & Documentation
+                Frontend Development
               </p>
             </div>
           </div>

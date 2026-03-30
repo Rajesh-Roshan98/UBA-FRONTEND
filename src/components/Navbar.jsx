@@ -16,7 +16,7 @@ const Navbar = () => {
 
   // 🔥 NEW: Track the last valid page the user was on (Ignore error pages)
   useEffect(() => {
-    if (location.pathname !== '/server-error' && location.pathname !== '/unauthorized') {
+    if (location.pathname !== '/server-error') {
       sessionStorage.setItem('lastValidPath', location.pathname);
     }
   }, [location.pathname]);

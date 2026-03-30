@@ -12,14 +12,16 @@ export default function HomePage() {
       border: "group-hover:border-blue-200",
       title: "Real-time Monitoring",
       desc: "Tracks user actions including logins, file access, data usage, and interaction frequency in real-time.",
+      link: "/rt-monitoring", // 🔥 ADDED: Route link
     },
     {
       icon: ShieldCheck,
       color: "text-indigo-600",
       bg: "bg-indigo-50",
       border: "group-hover:border-indigo-200",
-      title: "Threat Detection",
+      title: "Insider Threat Detection",
       desc: "Identifies abnormal behavior patterns using advanced User Behavior Analytics (UBA) and ML models.",
+      link: "/insider", // 🔥 ADDED: Route link
     },
     {
       icon: Database,
@@ -28,6 +30,7 @@ export default function HomePage() {
       border: "group-hover:border-purple-200",
       title: "Data Leak Prevention",
       desc: "Converts large-scale activity logs into actionable security insights to prevent unauthorized exfiltration.",
+      link: "/sc-analytics", // 🔥 ADDED: Route link
     },
   ];
 
@@ -120,9 +123,12 @@ export default function HomePage() {
                       <feature.icon size={28} strokeWidth={1.5} />
                     </div>
                     <div className="pt-1">
-                      <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                        {feature.title}
-                      </h3>
+                      {/* 🔥 UPDATED: Wrapped the heading in a Link */}
+                      <Link to={feature.link} className="inline-block">
+                        <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 hover:underline decoration-indigo-600 decoration-2 underline-offset-4 transition-all">
+                          {feature.title}
+                        </h3>
+                      </Link>
                       <p className="text-slate-500 leading-relaxed">
                         {feature.desc}
                       </p>

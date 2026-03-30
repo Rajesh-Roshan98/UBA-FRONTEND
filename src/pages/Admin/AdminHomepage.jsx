@@ -34,13 +34,16 @@ const AdminHomePage = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // 1. Fetch Stats from admin controller
-        const statsRes = await api.get(`${API_BASE}/api/admin/stats`);
-        const statsData = statsRes.data;
+        // 🔥 OPTIMIZED: Fetch Stats, Alerts, and Logs simultaneously (Parallel fetching)
+        const [statsRes, alertsRes, logsRes] = await Promise.all([
+          api.get(`${API_BASE}/api/admin/stats`),
+          api.get(`${API_BASE}/api/uba/alerts`),
+          api.get(`${API_BASE}/api/uba/logs?limit=5`)
+        ]);
 
-        // 2. Fetch Alerts directly to get accurate Critical/High counts
-        const alertsRes = await api.get(`${API_BASE}/api/uba/alerts`);
+        const statsData = statsRes.data;
         const alertsData = alertsRes.data;
+        const logsData = logsRes.data;
 
         // Default model metrics (API removed as per request)
         let modelMetrics = { accuracy: null, f1Score: '0%', fpRate: '0%' };
@@ -68,10 +71,6 @@ const AdminHomePage = () => {
             fpRate: modelMetrics.fpRate
           });
         }
-
-        // 4. Fetch Logs
-        const logsRes = await api.get(`${API_BASE}/api/uba/logs?limit=5`);
-        const logsData = logsRes.data;
 
         // Assuming logsData might be an array directly or wrapped in an object
         const rawLogs = Array.isArray(logsData) ? logsData : (logsData.logs || []);
