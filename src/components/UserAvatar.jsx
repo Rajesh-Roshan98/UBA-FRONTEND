@@ -52,27 +52,28 @@ const UserAvatar = () => {
     <>
       {/* Added: Global Full-Page Logout Animation Overlay */}
       {isLoggingOut && (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300">
-          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="mt-4 text-indigo-900 font-medium animate-pulse tracking-wide">logging out...</p>
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300 px-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm sm:text-base text-indigo-900 font-medium animate-pulse tracking-wide">logging out...</p>
         </div>
       )}
 
       <div className="relative" ref={dropdownRef}>
         {/* Avatar Trigger */}
         <div
-          className="relative flex items-center justify-center w-11 h-11 rounded-full cursor-pointer transition-all hover:ring-4 hover:ring-gray-100"
+          // 🔥 Reduced touch target size slightly on mobile for a sleeker look
+          className="relative flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full cursor-pointer transition-all hover:ring-4 hover:ring-gray-100"
           onClick={() => setOpen((prev) => !prev)}
         >
           {user.avatar ? (
             <img
               src={`${API_BASE}${user.avatar}`}
               alt="User"
-              className="w-11 h-11 rounded-full object-cover border border-gray-200 shadow-sm"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-gray-200 shadow-sm"
             />
           ) : (
             <div
-              className={`w-11 h-11 rounded-full ${bgColor} text-white flex items-center justify-center font-bold text-lg shadow-sm`}
+              className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full ${bgColor} text-white flex items-center justify-center font-bold text-sm sm:text-lg shadow-sm`}
             >
               {getInitials()}
             </div>
@@ -81,28 +82,31 @@ const UserAvatar = () => {
 
         {/* Rich Dropdown Menu */}
         {open && (
-          <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 transform transition-all ease-out duration-200">
+          <div 
+            // 🔥 Reduced width on mobile (w-[240px]) and shifted slightly to prevent overflowing the right edge
+            className="absolute top-[110%] -right-2 sm:right-0 w-[240px] sm:w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 transform transition-all ease-out duration-200 origin-top sm:origin-top-right"
+          >
             
             {/* Header Section */}
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-full ${bgColor} flex items-center justify-center text-white text-xs font-bold`}>
+                <div className={`w-9 h-9 rounded-full ${bgColor} flex items-center justify-center text-white text-xs sm:text-sm font-bold shrink-0`}>
                    {user.avatar ? <img src={`${API_BASE}${user.avatar}`} className="w-9 h-9 rounded-full object-cover" /> : getInitials()}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm text-gray-900 truncate">
+                    <p className="font-semibold text-sm text-gray-900 truncate">
                       {user.firstName} {user.lastName}
                     </p>
                     {/* ADMIN BADGE */}
                     {user.role === 'admin' && (
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[9px] font-bold uppercase tracking-wider border border-indigo-200">
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[9px] font-bold uppercase tracking-wider border border-indigo-200 shrink-0">
                         <ShieldCheck size={10} />
                         Admin
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-500 truncate font-medium">
+                  <p className="text-[11px] text-gray-500 truncate font-medium mt-0.5">
                     {user.email}
                   </p>
                 </div>
@@ -116,7 +120,7 @@ const UserAvatar = () => {
                   setOpen(false);
                   navigate("/profile");
                 }}
-                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center gap-3 w-full px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <User size={16} className="text-gray-500" /> 
                 Profile
@@ -126,7 +130,7 @@ const UserAvatar = () => {
                   setOpen(false);
                   navigate("/settings");
                 }}
-                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center gap-3 w-full px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <Settings size={16} className="text-gray-500" /> 
                 Settings
@@ -140,7 +144,7 @@ const UserAvatar = () => {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut} // Added: Disable button while logging out
-                className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-red-600 transition-colors ${
+                className={`flex items-center gap-3 w-full px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium text-red-600 transition-colors ${
                   isLoggingOut ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50 cursor-pointer'
                 }`} // Added: conditional styling to reflect disabled state
               >

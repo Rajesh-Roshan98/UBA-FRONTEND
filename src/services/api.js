@@ -6,8 +6,10 @@ let isRedirecting = false; // Flag to prevent multiple redirects
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true,
+  timeout: 8000, // Industry-standard 8-second fail-fast timeout
 });
-// 🔥 THE FIX: Add a request interceptor
+
+// Add a request interceptor
 api.interceptors.request.use(
   (config) => {
     // 1. Grab the token from localStorage
@@ -31,17 +33,35 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 🔥 Handle network errors (backend down, no internet)
+    const currentPath = window.location.pathname;
+    const isErrorPage = currentPath.startsWith('/server-error');
+    const isUnauthorizedPage = currentPath.startsWith('/unauthorized');
+
+    // ========================================================================
+    // 1. DYNAMIC ERROR PARSER: NO RESPONSE (Network Crash / Timeout)
+    // Handles: 503 (Refused) and 504 (Timeout)
+    // ========================================================================
     if (!error.response && !isRedirecting) {
       isRedirecting = true;
 
       console.error("Network error or backend down");
 
-      // Store the current path before redirect (skip error pages)
-      if (!window.location.pathname.startsWith('/server-error') && !window.location.pathname.startsWith('/unauthorized')) {
-        sessionStorage.setItem("lastValidPath", window.location.pathname);
+      // Dynamically determine if it's a Timeout (504) or Server Down (503)
+      let errorCode = 503; 
+      if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout') || error.name === 'AbortError') {
+        errorCode = 504;
       }
-      redirect("/server-error");
+
+      // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
+      if (!isErrorPage && !isUnauthorizedPage) {
+        sessionStorage.setItem("lastValidPath", currentPath);
+      }
+
+      // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read it, 
+      // even if we are already sitting on the /server-error page!
+      if (!isUnauthorizedPage) {
+        redirect(`/server-error?code=${errorCode}`);
+      }
 
       // Reset flag after a delay to allow future redirects
       setTimeout(() => {
@@ -58,7 +78,7 @@ api.interceptors.response.use(
     const isAuthRoute =
       requestUrl?.includes("/login") || requestUrl?.includes("/signup");
 
-    // 🔥 Handle 401 Unauthorized (expired token)
+    // Handle 401 Unauthorized (expired token)
     if (status === 401 && token && !isAuthRoute && !isRedirecting) {
       isRedirecting = true;
 
@@ -67,8 +87,8 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
 
       // Store the current path before redirect (skip error pages)
-      if (!window.location.pathname.startsWith('/server-error') && !window.location.pathname.startsWith('/unauthorized')) {
-        sessionStorage.setItem("lastValidPath", window.location.pathname);
+      if (!isErrorPage && !isUnauthorizedPage) {
+        sessionStorage.setItem("lastValidPath", currentPath);
       }
       redirect("/login");
 
@@ -77,17 +97,43 @@ api.interceptors.response.use(
       }, 2000);
     }
 
-    // 🔥 Handle server errors (500, 503, etc.)
-    if ((status >= 500 || status === 503) && !isRedirecting) {
+    // Handle 403 Forbidden (Access Denied)
+    if (status === 403 && !isRedirecting) {
       isRedirecting = true;
 
-      console.error("Server error:", status);
+      console.warn("Access denied. Redirecting to unauthorized page...");
 
       // Store the current path before redirect (skip error pages)
-      if (!window.location.pathname.startsWith('/server-error') && !window.location.pathname.startsWith('/unauthorized')) {
-        sessionStorage.setItem("lastValidPath", window.location.pathname);
+      if (!isErrorPage && !isUnauthorizedPage) {
+        sessionStorage.setItem("lastValidPath", currentPath);
       }
-      redirect("/server-error");
+      
+      // Redirect to dynamic unauthorized page with 403 code
+      redirect("/unauthorized?code=403");
+
+      setTimeout(() => {
+        isRedirecting = false;
+      }, 2000);
+    }
+
+    // ========================================================================
+    // 2. DYNAMIC ERROR PARSER: SERVER RESPONDED WITH ERROR
+    // status >= 500 automatically catches 500, 502, 503, 504, etc.
+    // ========================================================================
+    if ((status >= 500) && !isRedirecting) {
+      isRedirecting = true;
+
+      console.error(`Server error dynamically caught: ${status}`);
+
+      // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
+      if (!isErrorPage && !isUnauthorizedPage) {
+        sessionStorage.setItem("lastValidPath", currentPath);
+      }
+
+      // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read the exact status
+      if (!isUnauthorizedPage) {
+        redirect(`/server-error?code=${status}`);
+      }
 
       setTimeout(() => {
         isRedirecting = false;

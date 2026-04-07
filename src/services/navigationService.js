@@ -6,7 +6,7 @@ export const setNavigator = (nav) => {
   navigate = nav;
   // 🔥 If there was a pending redirect, execute it now
   if (pendingRedirect) {
-    navigate(pendingRedirect);
+    navigate(pendingRedirect, { replace: true }); // ✅ Added replace: true
     pendingRedirect = null;
   }
 };
@@ -18,9 +18,9 @@ export const redirect = (path) => {
     return;
   }
   if (navigate) {
-    navigate(path);
+    navigate(path, { replace: true }); // ✅ Added replace: true
   } else {
     // Fallback in case navigate is not yet set (should not happen)
-    window.location.assign(path);
+    window.location.replace(path); // ✅ Changed assign to replace
   }
 };

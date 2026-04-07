@@ -89,25 +89,17 @@ const AdminHomePage = () => {
       } catch (error) {
         console.error("Failed to fetch admin dashboard data:", error);
         
-        // 🔥 NEW: Error handling navigation logic
-        if (error.response) {
-          const status = error.response.status;
-          // Route authentication/authorization errors to unauthorized page
-          if (status === 401 || status === 403 || status === 404) {
-            navigate('/unauthorized');
-          } 
-          // Route server errors to not found page
-          else if (status >= 500) {
-            navigate('/server-error');
-          }
-        }
+        // 🔥 UPDATED: Manual navigation logic removed.
+        // Your global api.js interceptor will now automatically handle redirects
+        // to /unauthorized?code=... or /server-error?code=... based on HTTP status
+        
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [navigate]);
+  }, [navigate, API_BASE]);
 
   const adminModules = [
     {
@@ -219,28 +211,28 @@ const AdminHomePage = () => {
     <ThemeLayout>
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Admin Control Panel</h1>
           <p className="text-gray-600">Detecting and Preventing Data Exfiltration in Cloud Using UBA</p>
         </div>
-        <div className="flex space-x-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:space-x-4">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search admin tools..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64"
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full sm:w-64"
             />
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-center">
             Quick Actions
           </button>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard icon={Users} title="Total Users" value={quickStats.totalUsers} color="text-blue-600" />
         <StatCard icon={Activity} title="Active Sessions" value={quickStats.activeSessions} color="text-green-600" />
         <StatCard icon={AlertTriangle} title="Critical Alerts" value={quickStats.criticalAlerts} color="text-red-600" />
@@ -251,21 +243,21 @@ const AdminHomePage = () => {
 
       {/* Admin Modules Grid */}
       <div>
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
           <h2 className="text-2xl font-bold text-gray-800">Admin Modules</h2>
-          <div className="flex space-x-2">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center">
+          <div className="flex w-full sm:w-auto space-x-2">
+            <button className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center">
               <Filter className="w-4 h-4 mr-2" />
               Filter
             </button>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center">
+            <button className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center">
               <SettingsIcon className="w-4 h-4 mr-2" />
               Settings
             </button>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {adminModules.map((module) => {
             const Icon = module.icon;
             return (
@@ -308,7 +300,7 @@ const AdminHomePage = () => {
       {/* System Status */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4">System Status</h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="border rounded-lg p-4 text-center">
             <ShieldCheck className="w-8 h-8 text-green-600 mx-auto mb-2" />
             <h3 className="font-semibold">UBA Model</h3>

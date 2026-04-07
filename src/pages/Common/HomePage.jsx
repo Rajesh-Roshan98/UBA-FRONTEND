@@ -56,7 +56,8 @@ export default function HomePage() {
   };
 
   return (
-    <div className="h-screen w-screen fixed inset-0 bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+    // 🔥 UPDATED: Removed fixed/h-screen and replaced with relative min-h-[100dvh] for mobile scrolling
+    <div className="relative min-h-[100dvh] w-full bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
       
       {/* --- MATRIX GRID BACKGROUND EFFECT (Fixed to cover entire viewport) --- */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -79,64 +80,70 @@ export default function HomePage() {
       </div>
 
       {/* --- MAIN CONTENT --- */}
-      <div className="relative z-10 flex flex-col justify-center min-h-screen py-12">
-        <div className="max-w-7xl mx-auto px-6 w-full">
+      {/* 🔥 UPDATED: Added py-16 for mobile breathing room */}
+      <div className="relative z-10 flex flex-col justify-center min-h-[100dvh] py-16 lg:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           
           <motion.div 
-            className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center"
+            className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
             
             {/* LEFT: TEXT CONTENT */}
-            <motion.div className="space-y-8" variants={itemVariants}>
+            {/* 🔥 UPDATED: Added sm:text-center lg:text-left to handle centering nicely on tablets if desired, though left align is fine too */}
+            <motion.div className="space-y-6 sm:space-y-8" variants={itemVariants}>
               
-              <h1 className="text-4xl lg:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight">
+              {/* 🔥 UPDATED: Fluid text sizing */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.15] sm:leading-[1.1] tracking-tight">
                 User Behavior Analytics for{" "}
-                <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-violet-600 to-purple-600 animate-gradient-x">
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-violet-600 to-purple-600 animate-gradient-x block sm:inline mt-2 sm:mt-0">
                   Cloud Security.
                 </span>
               </h1>
               
-              <p className="text-lg text-slate-600 leading-relaxed max-w-lg">
+              {/* 🔥 UPDATED: Text size adjusted for mobile readability */}
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg">
                 A centralized dashboard that analyzes user activity patterns to
                 detect <strong>anomalies</strong>, monitor
                 <strong> insider threats</strong>, and prevent
                 <strong className="text-indigo-600"> unauthorized data exfiltration</strong> 
-                in cloud environments.
+                {" "}in cloud environments.
               </p>
 
             </motion.div>
 
             {/* RIGHT: FEATURE CARDS (Staggered Grid) */}
-            <motion.div className="flex flex-col gap-5" variants={containerVariants}>
+            <motion.div className="flex flex-col gap-4 sm:gap-5" variants={containerVariants}>
               {features.map((feature, index) => (
                 <motion.div 
                   key={index}
                   variants={itemVariants}
                   whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                  className={`group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10 ${feature.border}`}
+                  // 🔥 UPDATED: Responsive padding on cards
+                  className={`group relative bg-white/80 backdrop-blur-sm p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10 ${feature.border}`}
                 >
-                  <div className="flex items-start gap-5">
-                    <div className={`w-14 h-14 rounded-2xl ${feature.bg} flex items-center justify-center ${feature.color} shrink-0 transition-transform group-hover:scale-110 duration-500`}>
-                      <feature.icon size={28} strokeWidth={1.5} />
+                  <div className="flex items-start gap-4 sm:gap-5">
+                    {/* 🔥 UPDATED: Responsive icon sizing */}
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${feature.bg} flex items-center justify-center ${feature.color} shrink-0 transition-transform group-hover:scale-110 duration-500`}>
+                      <feature.icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.5} />
                     </div>
-                    <div className="pt-1">
+                    <div className="pt-0.5 sm:pt-1">
                       {/* 🔥 UPDATED: Wrapped the heading in a Link */}
                       <Link to={feature.link} className="inline-block">
-                        <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 hover:underline decoration-indigo-600 decoration-2 underline-offset-4 transition-all">
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1.5 sm:mb-2 group-hover:text-indigo-600 hover:underline decoration-indigo-600 decoration-2 underline-offset-4 transition-all">
                           {feature.title}
                         </h3>
                       </Link>
-                      <p className="text-slate-500 leading-relaxed">
+                      <p className="text-sm sm:text-base text-slate-500 leading-relaxed">
                         {feature.desc}
                       </p>
                     </div>
                   </div>
                   
                   {/* Decorative corner accent */}
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-linear-to-bl from-slate-100/50 to-transparent rounded-tr-2xl -z-10 transition-opacity opacity-0 group-hover:opacity-100"></div>
+                  <div className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-linear-to-bl from-slate-100/50 to-transparent rounded-tr-2xl -z-10 transition-opacity opacity-0 group-hover:opacity-100"></div>
                 </motion.div>
               ))}
             </motion.div>

@@ -55,12 +55,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
       return children;
     }
 
-    return <Navigate to="/unauthorized" replace />;
+    // 🔥 FIX: Feeds directly into the Dynamic Error Parser in Unauthorized.jsx
+    return <Navigate to="/unauthorized?code=403" replace />;
   }
 
   /* 🛑 Wrong Role */
   if (authState === "unauthorized") {
-    return <Navigate to="/unauthorized" replace />;
+    // 🔥 FIX: Feeds directly into the Dynamic Error Parser in Unauthorized.jsx
+    return <Navigate to="/unauthorized?code=403" replace />;
   }
 
   /* ✅ Verified */

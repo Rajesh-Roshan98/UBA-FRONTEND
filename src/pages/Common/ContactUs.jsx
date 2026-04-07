@@ -71,10 +71,10 @@ const ContactUs = () => {
   // --- CONDITIONAL RENDERING: EXACTLY LIKE ADMIN HOMEPAGE ---
   if (isAuthLoading) {
     return (
-      <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 overscroll-none">
+      <div className="relative h-full w-full bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 py-10 px-4 sm:px-6 lg:px-8">
         
         {/* --- BACKGROUND GRID EFFECT --- */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="fixed inset-0 z-0 pointer-events-none">
           {/* Base Gradient */}
           <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white"></div>
           
@@ -89,9 +89,9 @@ const ContactUs = () => {
         </div>
 
         {/* Admin Home Page Loading Animation Style */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-[90%] sm:max-w-md lg:max-w-lg bg-white/50 backdrop-blur-md rounded-xl p-8 sm:p-12 md:p-16">
           <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="mt-4 text-sm font-medium text-gray-500">
+          <p className="mt-4 text-sm font-medium text-gray-500 text-center">
             Loading Contact Us...
           </p>
         </div>
@@ -100,11 +100,11 @@ const ContactUs = () => {
   }
 
   return (
-    // UPDATED: 'fixed inset-0' locks it to viewport. 'overflow-hidden' kills all scrollbars.
-    <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 overscroll-none">
+    // UPDATED: Changed min-h-[100dvh] back to h-full to delegate scrolling to parent layout and fix PC scrollbar issue
+    <div className="relative h-full w-full bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 py-10 md:py-16 px-4 sm:px-6 lg:px-8">
       
       {/* --- BACKGROUND GRID EFFECT --- */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         {/* Base Gradient */}
         <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white"></div>
         
@@ -119,21 +119,21 @@ const ContactUs = () => {
       </div>
 
       {/* --- FORM CARD --- */}
-      <div className="relative z-10 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg p-8 mx-4">
-        <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">
+      <div className="relative z-10 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl w-full max-w-[95%] sm:max-w-md lg:max-w-lg p-6 sm:p-8 md:p-10 mx-auto">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center mb-2">
           Contact Us
         </h2>
-        <p className="text-slate-600 text-center mb-6">
+        <p className="text-sm sm:text-base text-slate-600 text-center mb-6 sm:mb-8 px-2 sm:px-0">
           Have questions or found an anomaly? Get in touch with us.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           {/* Name */}
           <div>
-            <label className="text-slate-700 text-sm font-medium">Name</label>
+            <label className="text-slate-700 text-sm sm:text-base font-medium">Name</label>
             {/* UPDATED: Dynamic wrapper classes for hover state */}
-            <div className={`flex items-center border border-slate-200 rounded-lg px-3 mt-1 transition-all ${user ? "bg-slate-100 cursor-not-allowed opacity-80" : "bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400"}`}>
-              <User className={user ? "text-slate-400" : "text-indigo-500"} size={18} />
+            <div className={`flex items-center border border-slate-200 rounded-lg px-3 mt-1.5 transition-all ${user ? "bg-slate-100 cursor-not-allowed opacity-80" : "bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400"}`}>
+              <User className={user ? "text-slate-400 shrink-0" : "text-indigo-500 shrink-0"} size={20} />
               <input
                 type="text"
                 name="name"
@@ -141,17 +141,17 @@ const ContactUs = () => {
                 onChange={handleChange}
                 disabled={!!user} // <-- Disables if user exists
                 placeholder="Your name"
-                className="bg-transparent w-full px-3 py-2 text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
+                className="bg-transparent w-full px-3 py-3 sm:py-2.5 text-base text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
               />
             </div>
           </div>
 
           {/* Email */}
           <div>
-            <label className="text-slate-700 text-sm font-medium">Email</label>
+            <label className="text-slate-700 text-sm sm:text-base font-medium">Email</label>
             {/* UPDATED: Dynamic wrapper classes for hover state */}
-            <div className={`flex items-center border border-slate-200 rounded-lg px-3 mt-1 transition-all ${user ? "bg-slate-100 cursor-not-allowed opacity-80" : "bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400"}`}>
-              <Mail className={user ? "text-slate-400" : "text-indigo-500"} size={18} />
+            <div className={`flex items-center border border-slate-200 rounded-lg px-3 mt-1.5 transition-all ${user ? "bg-slate-100 cursor-not-allowed opacity-80" : "bg-slate-50 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400"}`}>
+              <Mail className={user ? "text-slate-400 shrink-0" : "text-indigo-500 shrink-0"} size={20} />
               <input
                 type="email"
                 name="email"
@@ -159,23 +159,23 @@ const ContactUs = () => {
                 onChange={handleChange}
                 disabled={!!user} // <-- Disables if user exists
                 placeholder="your@email.com"
-                className="bg-transparent w-full px-3 py-2 text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
+                className="bg-transparent w-full px-3 py-3 sm:py-2.5 text-base text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
               />
             </div>
           </div>
 
           {/* Message */}
           <div>
-            <label className="text-slate-700 text-sm font-medium">Message</label>
-            <div className="flex bg-slate-50 border border-slate-200 rounded-lg px-3 mt-1 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400 transition-all">
-              <MessageSquare className="text-indigo-500 mt-3" size={18} />
+            <label className="text-slate-700 text-sm sm:text-base font-medium">Message</label>
+            <div className="flex bg-slate-50 border border-slate-200 rounded-lg px-3 mt-1.5 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400 transition-all">
+              <MessageSquare className="text-indigo-500 mt-3.5 sm:mt-3 shrink-0" size={20} />
               <textarea
                 name="message"
                 value={formData.message}
                 onChange={handleChange}
                 rows="4"
                 placeholder="Write your message..."
-                className="bg-transparent w-full px-3 py-2 text-slate-700 outline-none resize-none placeholder:text-slate-400"
+                className="bg-transparent w-full px-3 py-3 sm:py-2.5 text-base text-slate-700 outline-none resize-none placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -184,7 +184,7 @@ const ContactUs = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 transition rounded-lg py-2.5 text-white font-semibold shadow-md shadow-indigo-200 disabled:opacity-70"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 transition rounded-lg mt-4 sm:mt-2 py-3 sm:py-2.5 text-base text-white font-semibold shadow-md shadow-indigo-200 disabled:opacity-70 active:scale-[0.98]"
           >
             {loading ? "Sending..." : "Send Message"}
           </button>

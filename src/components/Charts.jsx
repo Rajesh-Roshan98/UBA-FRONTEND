@@ -75,6 +75,8 @@ const Charts = ({ logs }) => {
 
   const lineOptions = {
     responsive: true,
+    // 🔥 UPDATED: Crucial for allowing the chart to resize freely inside its responsive container
+    maintainAspectRatio: false, 
     plugins: {
       legend: { position: "bottom" },
       title: { display: false },
@@ -98,55 +100,64 @@ const Charts = ({ logs }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
       {/* Individual line charts */}
       {lineMetrics.length > 0 ? (
         lineMetrics.map((metric) => (
           <div
             key={metric.label}
-            className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow"
+            className="bg-white p-4 sm:p-5 rounded-xl shadow border border-gray-100 hover:shadow-lg transition-shadow w-full"
           >
-            <h4 className="text-lg font-semibold mb-3">{metric.label}</h4>
-            <Line
-              data={{
-                labels,
-                datasets: [
-                  {
-                    label: metric.label,
-                    data: logs.map((l) => l[metric.key]),
-                    borderColor: metric.color,
-                    backgroundColor: metric.color.replace("1)", "0.2)"),
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 3,
-                    pointHoverRadius: 5,
-                  },
-                ],
-              }}
-              options={lineOptions}
-            />
+            <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800">{metric.label}</h4>
+            {/* 🔥 UPDATED: Added relative wrapper with fixed height to control chart scaling on mobile */}
+            <div className="relative w-full h-[250px] sm:h-[300px]">
+              <Line
+                data={{
+                  labels,
+                  datasets: [
+                    {
+                      label: metric.label,
+                      data: logs.map((l) => l[metric.key]),
+                      borderColor: metric.color,
+                      backgroundColor: metric.color.replace("1)", "0.2)"),
+                      tension: 0.3,
+                      fill: true,
+                      pointRadius: window.innerWidth < 640 ? 2 : 3, // Slightly smaller points on mobile
+                      pointHoverRadius: 5,
+                    },
+                  ],
+                }}
+                options={lineOptions}
+              />
+            </div>
           </div>
         ))
       ) : (
-        <p className="text-center text-gray-500 col-span-2">
-          No metrics available for line charts
-        </p>
+        <div className="flex items-center justify-center p-8 bg-gray-50 rounded-xl border border-gray-200 col-span-1 lg:col-span-2">
+          <p className="text-center text-gray-500 text-sm sm:text-base">
+            No metrics available for line charts
+          </p>
+        </div>
       )}
 
       {/* Bar chart for anomalies */}
-      <div className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition-shadow">
-        <h4 className="text-lg font-semibold mb-3">Detected Anomalies</h4>
-        <Bar
-          data={barData}
-          options={{
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
-              x: { grid: { color: "#e5e7eb" } },
-            },
-          }}
-        />
+      <div className="bg-white p-4 sm:p-5 rounded-xl shadow border border-gray-100 hover:shadow-lg transition-shadow w-full">
+        <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800">Detected Anomalies</h4>
+        {/* 🔥 UPDATED: Added relative wrapper with fixed height to control chart scaling on mobile */}
+        <div className="relative w-full h-[250px] sm:h-[300px]">
+          <Bar
+            data={barData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false, // Crucial for responsive height
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, grid: { color: "#e5e7eb" } },
+                x: { grid: { color: "#e5e7eb" } },
+              },
+            }}
+          />
+        </div>
       </div>
     </div>
   );

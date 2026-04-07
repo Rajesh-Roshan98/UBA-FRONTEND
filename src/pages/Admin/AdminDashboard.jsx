@@ -76,18 +76,10 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error("Failed to load stats:", err);
       
-      // 🔥 NEW: Error handling navigation logic (Matching AdminHomePage)
-      if (err.response) {
-        const status = err.response.status;
-        // Route authentication/authorization errors to unauthorized page
-        if (status === 401 || status === 403 || status === 404) {
-          navigate('/unauthorized');
-        } 
-        // Route server errors to not found page
-        else if (status >= 500) {
-          navigate('/server-error');
-        }
-      }
+      // 🔥 UPDATED: Manual navigation logic removed.
+      // Your global api.js interceptor will now automatically handle redirects
+      // to /unauthorized?code=... or /server-error?code=... based on HTTP status
+      
     } finally {
       setLoading(false);
     }
@@ -133,7 +125,7 @@ const AdminDashboard = () => {
     return (
       <div 
         onClick={isClickable && !loading ? onClick : undefined}
-        className={`group bg-white rounded-2xl p-5 flex items-center justify-between transition-all duration-300 ease-out
+        className={`group bg-white rounded-2xl p-4 sm:p-5 flex items-center justify-between transition-all duration-300 ease-out
           ${isActive ? `border-2 ${activeBorder} shadow-md` : 'border border-gray-200 shadow-sm'}
           ${shouldHover && !isActive ? 'hover:shadow-xl hover:border-gray-300 hover:-translate-y-1.5 hover:scale-[1.02]' : ''} 
           ${isClickable ? 'cursor-pointer' : ''}
@@ -141,40 +133,41 @@ const AdminDashboard = () => {
         `}
       >
         <div>
-          <h4 className="text-gray-500 font-medium mb-1 text-sm transition-colors duration-300 group-hover:text-gray-800">{title}</h4>
-          <p className={`text-2xl font-bold ${colorClass}`}>
+          <h4 className="text-gray-500 font-medium mb-1 text-xs sm:text-sm transition-colors duration-300 group-hover:text-gray-800">{title}</h4>
+          <p className={`text-xl sm:text-2xl font-bold ${colorClass}`}>
             {loading ? "—" : value}
           </p>
           {isClickable && (
-            <p className="text-[11px] text-gray-400 mt-1 font-medium tracking-wide opacity-80 transition-opacity duration-300 group-hover:opacity-100">CLICK TO VIEW CHARTS 📈</p>
+            <p className="text-[9px] sm:text-[11px] text-gray-400 mt-1 font-medium tracking-wide opacity-80 transition-opacity duration-300 group-hover:opacity-100">CLICK TO VIEW CHARTS 📈</p>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${bgClass} bg-opacity-20 transition-all duration-300 ease-out
+        <div className={`p-2.5 sm:p-3 rounded-xl ${bgClass} bg-opacity-20 transition-all duration-300 ease-out
           ${shouldHover && !isActive ? 'group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-sm' : ''}
         `}>
-          <Icon className={`w-6 h-6 ${colorClass} transition-transform duration-300`} strokeWidth={2.5} />
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${colorClass} transition-transform duration-300`} strokeWidth={2.5} />
         </div>
       </div>
     );
   };
 
   return (
-    <div className="relative p-6 bg-gray-50 min-h-screen space-y-8">
+    // 🔥 REMOVED min-h-screen to prevent PC scrollbars and replaced with w-full h-full
+    <div className="relative w-full h-full p-4 sm:p-6 lg:p-8 bg-gray-50 font-sans space-y-6 sm:space-y-8">
 
       {/* 🔄 DB LOADER */}
       {loading && (
         <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="h-14 w-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-12 w-12 sm:h-14 sm:w-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
 
       {/* 📊 MAIN DASHBOARD HEADER & CONSOLIDATED CARDS */}
       <div>
-        <h1 className="font-extrabold text-gray-800 text-3xl tracking-tight">UBA Security Dashboard</h1>
-        <p className="text-gray-500 mb-6 mt-1 font-medium">Real-time monitoring of user behavior and threat detection</p>
+        <h1 className="font-extrabold text-gray-800 text-2xl sm:text-3xl lg:text-4xl tracking-tight">UBA Security Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-500 mb-5 sm:mb-6 mt-1 font-medium">Real-time monitoring of user behavior and threat detection</p>
         
         {/* All 6 cards in a single grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 relative z-10">
           <StatCard
             icon={Activity}
             title="Total Activities"
@@ -209,45 +202,48 @@ const AdminDashboard = () => {
 
       {/* 📊 CHARTS + RECENT ACTIVITY */}
       {activeCard && (
-        <div className="relative space-y-6 mt-8 animate-in fade-in duration-500">
+        <div className="relative space-y-5 sm:space-y-6 mt-6 sm:mt-8 animate-in fade-in duration-500">
 
           {/* Chart loader */}
           {chartLoading && (
             <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center rounded-2xl backdrop-blur-sm">
-              <div className="h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-8 w-8 sm:h-10 sm:w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
 
           {/* Charts */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 min-h-137.5">
-            <h4 className="text-lg font-bold text-gray-800 mb-6">
+          {/* 🔥 Replaced min-h-137.5 with responsive standard classes */}
+          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-200 min-h-[300px] sm:min-h-[400px] lg:min-h-[550px] w-full overflow-hidden">
+            <h4 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6">
               {activeCard === "total" ? "Total Activities Overview" : "Detected Anomalies Overview"}
             </h4>
 
             {paginatedLogs.length > 0 ? (
-              <Charts logs={paginatedLogs} />
+              <div className="w-full overflow-x-auto pb-2">
+                <Charts logs={paginatedLogs} />
+              </div>
             ) : (
-              <p className="text-center text-gray-500 py-20">No data available for this view.</p>
+              <p className="text-center text-sm sm:text-base text-gray-500 py-12 sm:py-20">No data available for this view.</p>
             )}
           </div>
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-4">
+            <div className="flex flex-row justify-center items-center gap-3 sm:gap-4 mt-4 sm:mt-6">
               <button
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs sm:text-sm font-medium"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
               >
                 Previous
               </button>
 
-              <span className="text-gray-600 text-sm font-medium">
+              <span className="text-gray-600 text-xs sm:text-sm font-medium">
                 Page {currentPage} of {totalPages}
               </span>
 
               <button
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs sm:text-sm font-medium"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
               >
@@ -259,6 +255,6 @@ const AdminDashboard = () => {
       )}
     </div>
   );
-}
+};
 
 export default AdminDashboard;

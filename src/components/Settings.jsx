@@ -265,12 +265,12 @@ const SettingsPage = () => {
     switch (activeTab) {
       case "account":
         return (
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-gray-900">
+          <div className="space-y-4 sm:space-y-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
               Profile Information
             </h3>
 
-            <div className="flex items-center space-x-4 mb-2">
+            <div className="flex items-center space-x-4 mb-4 sm:mb-2">
               {settings.avatarUrl ? (
                 <img
                   src={`${api.defaults.baseURL?.replace(/\/+$/, "") || ""}${settings.avatarUrl}`}
@@ -284,16 +284,16 @@ const SettingsPage = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
                 </label>
-                <div className="flex items-center justify-between w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed opacity-90">
-                  <span className="text-gray-700 truncate">
+                <div className="flex items-center justify-between w-full px-4 py-3 sm:py-2 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed opacity-90">
+                  <span className="text-sm sm:text-base text-gray-700 truncate">
                     {settings.fname || "Not set"}
                   </span>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex-shrink-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex-shrink-0 ml-2">
                     Not Editable
                   </span>
                 </div>
@@ -311,27 +311,27 @@ const SettingsPage = () => {
                       onChange={(e) =>
                         handleTempChange("email", e.target.value)
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       autoFocus
                     />
                     <button
                       onClick={() => handleSaveField("email")}
-                      className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition"
+                      className="p-3 sm:p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition shrink-0"
                     >
                       <Check size={20} />
                     </button>
                     <button
                       onClick={() => toggleEdit("email")}
-                      className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
+                      className="p-3 sm:p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition shrink-0"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition-colors">
+                    <div className="flex items-center w-full px-4 py-3 sm:py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition-colors">
                       <div className="flex items-center gap-3 w-full overflow-hidden">
-                        <span className="text-gray-900 truncate">
+                        <span className="text-sm sm:text-base text-gray-900 truncate">
                           {maskEmail(settings.email) || "Not set"}
                         </span>
                         {settings.email &&
@@ -343,7 +343,7 @@ const SettingsPage = () => {
                             <button
                               onClick={handleVerifyEmail}
                               disabled={sendingOtp}
-                              className="text-[10px] bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-2 py-0.5 rounded-full font-bold transition flex-shrink-0 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-[10px] bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-2 py-1 sm:py-0.5 rounded-full font-bold transition flex-shrink-0 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {sendingOtp ? "Sending..." : "Verify Now"}
                             </button>
@@ -352,7 +352,7 @@ const SettingsPage = () => {
                     </div>
                     <button
                       onClick={() => toggleEdit("email")}
-                      className="mt-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition inline-block"
+                      className="mt-1.5 sm:mt-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition inline-block p-1 sm:p-0"
                     >
                       Change Email
                     </button>
@@ -361,7 +361,7 @@ const SettingsPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 mt-2 md:mt-0">
                   Phone Number
                 </label>
                 {editModes.phone ? (
@@ -372,31 +372,31 @@ const SettingsPage = () => {
                       onChange={(e) =>
                         handleTempChange("phone", e.target.value)
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       autoFocus
                     />
                     <button
                       onClick={() => handleSaveField("phone")}
-                      className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition"
+                      className="p-3 sm:p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition shrink-0"
                     >
                       <Check size={20} />
                     </button>
                     <button
                       onClick={() => toggleEdit("phone")}
-                      className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
+                      className="p-3 sm:p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition shrink-0"
                     >
                       <X size={20} />
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition-colors">
+                    <div className="flex items-center w-full px-4 py-3 sm:py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition-colors">
                       <div className="flex items-center gap-3 w-full overflow-hidden">
-                        <span className="text-gray-900 truncate">
+                        <span className="text-sm sm:text-base text-gray-900 truncate">
                           {maskPhone(settings.phone) || "Not set"}
                         </span>
                         {settings.phone && (
-                          <button className="text-[10px] bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-2 py-0.5 rounded-full font-bold transition flex-shrink-0 uppercase tracking-wider">
+                          <button className="text-[10px] bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-2 py-1 sm:py-0.5 rounded-full font-bold transition flex-shrink-0 uppercase tracking-wider">
                             Verify Now
                           </button>
                         )}
@@ -404,7 +404,7 @@ const SettingsPage = () => {
                     </div>
                     <button
                       onClick={() => toggleEdit("phone")}
-                      className="mt-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition inline-block"
+                      className="mt-1.5 sm:mt-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition inline-block p-1 sm:p-0"
                     >
                       {settings.phone
                         ? "Change Phone Number"
@@ -415,11 +415,11 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 pt-3 mt-3">
+            <div className="border-t border-gray-200 pt-4 sm:pt-3 mt-4 sm:mt-3">
               <h3 className="text-lg font-semibold text-red-600 mb-2">
                 Danger Zone
               </h3>
-              <div className="bg-red-50/80 border border-red-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div className="bg-red-50/80 border border-red-200 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-3">
                 <div>
                   <p className="font-semibold text-red-900">Delete Account</p>
                   <p className="text-sm text-red-700 mt-1">
@@ -427,10 +427,9 @@ const SettingsPage = () => {
                     be certain.
                   </p>
                 </div>
-                {/* 🔥 REPLACED inline confirmation with a simple delete button */}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hover:shadow-md transition-all flex-shrink-0 font-medium text-sm"
+                  className="w-full md:w-auto px-5 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hover:shadow-md transition-all flex-shrink-0 font-medium text-sm text-center"
                 >
                   Delete Account
                 </button>
@@ -439,24 +438,23 @@ const SettingsPage = () => {
           </div>
         );
 
-
       case "security":
         return (
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-gray-900">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
               Security Settings
             </h3>
 
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-200 rounded-lg bg-white transition-colors">
-                <div className="flex items-center">
-                  <div className="bg-yellow-100 p-2 rounded-lg mr-4 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border border-gray-200 rounded-lg bg-white transition-colors">
+                <div className="flex items-start sm:items-center">
+                  <div className="bg-yellow-100 p-2.5 sm:p-2 rounded-lg mr-4 flex-shrink-0">
                     <Lock className="text-yellow-600" size={20} />
                   </div>
                   <div className="text-left">
                     <button
                       onClick={() => navigate("/reset-password")}
-                      className="font-medium text-gray-900 hover:text-blue-600 transition-colors focus:outline-none"
+                      className="font-medium text-base sm:text-sm text-gray-900 hover:text-blue-600 transition-colors focus:outline-none text-left"
                     >
                       Change Password
                     </button>
@@ -468,13 +466,13 @@ const SettingsPage = () => {
               </div>
 
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center mb-4 sm:mb-0">
-                    <div className="bg-green-100 p-2 rounded-lg mr-4 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start sm:items-center mb-4 sm:mb-0">
+                    <div className="bg-green-100 p-2.5 sm:p-2 rounded-lg mr-4 flex-shrink-0">
                       <Monitor className="text-green-600" size={20} />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Active Sessions</p>
+                      <p className="font-medium text-base sm:text-sm text-gray-900">Active Sessions</p>
                       <p className="text-sm text-gray-500 mt-0.5">
                         Manage devices currently logged into your account.
                       </p>
@@ -483,60 +481,63 @@ const SettingsPage = () => {
                   <button 
                     onClick={handleViewDevices}
                     disabled={loadingSessions}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium whitespace-nowrap"
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium whitespace-nowrap text-center"
                   >
                     {loadingSessions ? "Loading..." : sessions ? "Hide Devices" : "View Devices"}
                   </button>
                 </div>
                 
                 {sessions && (
-                  <div className="mt-3 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-4 shadow-inner transition-all">
+                  <div className="mt-3 p-4 sm:p-5 border border-gray-200 rounded-lg bg-gray-50 space-y-4 shadow-inner transition-all overflow-hidden">
                     
-                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 pb-3 gap-2">
                       <h4 className="text-sm font-semibold text-gray-900">Your Logged-in Devices</h4>
                       {sessions.length > 1 && (
                         <button 
                           onClick={handleLogoutAllOtherSessions}
                           disabled={actionLoading}
-                          className="text-xs font-semibold text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+                          className="text-sm sm:text-xs font-semibold text-red-600 hover:text-red-800 transition-colors disabled:opacity-50 self-start sm:self-auto p-1 sm:p-0 -ml-1 sm:ml-0"
                         >
                           Log out all other devices
                         </button>
                       )}
                     </div>
 
-                    {/* 🔥 UPDATED: Added a sort operation here to ensure current device is always first in the list */}
                     {sessions.length > 0 ? (
-                      [...sessions]
+                      <div className="space-y-3">
+                      {[...sessions]
                         .sort((a, b) => (b.current ? 1 : 0) - (a.current ? 1 : 0))
                         .map((session, idx) => (
-                        <div key={session.id || idx} className="flex flex-col sm:flex-row justify-between sm:items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm gap-3">
+                        <div key={session.id || idx} className="flex flex-col sm:flex-row justify-between sm:items-center bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm gap-3">
                           <div>
                             <p className="font-medium text-gray-800 text-sm">
                               {session.device ? session.device.split(' | ')[0] : "Unknown Device"}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Location: {session.location || "Unknown"} • Last Active: {session.lastActive ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(session.lastActive)) : "Recently"}
+                            <p className="text-xs text-gray-500 mt-1 sm:mt-0.5 leading-relaxed">
+                              Location: {session.location || "Unknown"} <br className="sm:hidden" />
+                              <span className="hidden sm:inline"> • </span>
+                              Last Active: {session.lastActive ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(session.lastActive)) : "Recently"}
                             </p>
                           </div>
                           
-                          <div className="flex items-center gap-3 self-end sm:self-auto">
+                          <div className="flex items-center gap-3 self-start sm:self-auto w-full sm:w-auto justify-between sm:justify-end mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">
                             {session.current ? (
-                              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold uppercase tracking-wider">
+                              <span className="text-[10px] bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                                 Current
                               </span>
                             ) : (
                               <button
                                 onClick={() => handleLogoutSession(session.id)}
                                 disabled={actionLoading}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-red-50 hover:text-red-600 border border-gray-200 hover:border-red-200 rounded-md transition-all disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-red-50 hover:text-red-600 border border-gray-200 hover:border-red-200 rounded-md transition-all disabled:opacity-50 w-full sm:w-auto justify-center"
                               >
                                 <Trash2 size={14} /> Log out
                               </button>
                             )}
                           </div>
                         </div>
-                      ))
+                      ))}
+                      </div>
                     ) : (
                       <p className="text-sm text-gray-500 italic">No active sessions recorded in the database.</p>
                     )}
@@ -550,26 +551,26 @@ const SettingsPage = () => {
       case "support":
         return (
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-gray-900">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
               Help & Support
             </h3>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
               {supportLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={link.action}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition w-full"
+                  className="flex items-center justify-between p-4 sm:p-5 border border-gray-200 rounded-lg hover:bg-gray-50 transition w-full"
                 >
                   <div className="flex items-center">
-                    <div className={`${link.bg} p-2 rounded-lg mr-4`}>
+                    <div className={`${link.bg} p-2.5 sm:p-2 rounded-lg mr-4 flex-shrink-0`}>
                       <link.icon className={link.text} size={24} />
                     </div>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900">{link.title}</p>
-                      <p className="text-sm text-gray-500">{link.desc}</p>
+                      <p className="font-medium text-gray-900 text-base sm:text-sm">{link.title}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">{link.desc}</p>
                     </div>
                   </div>
-                  <div className="text-gray-400">
+                  <div className="text-gray-400 shrink-0 ml-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -599,9 +600,7 @@ const SettingsPage = () => {
     return (
       <div className="fixed inset-0 z-[999] flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
-          {/* Spinner */}
           <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-          {/* Animated Text */}
           <p className="text-gray-500 font-medium animate-pulse text-sm">
             Loading settings...
           </p>
@@ -620,24 +619,25 @@ const SettingsPage = () => {
         </div>
       )}
 
-      <div className="relative w-full min-h-[calc(100vh-3.5rem)] h-auto overflow-y-auto overflow-x-hidden bg-gray-100 p-4 md:p-8 font-sans">
+      {/* 🔥 REMOVED min-h-[calc(100dvh-3.5rem)] to prevent PC scrollbar conflict with parent layout */}
+      <div className="relative w-full h-full bg-gray-100 p-4 sm:p-6 md:p-8 font-sans">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-            <p className="text-gray-500 mt-1">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
+            <p className="text-sm sm:text-base text-gray-500 mt-1">
               Manage your account details and preferences.
             </p>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-64 flex-shrink-0">
+            <div className="w-full lg:w-64 flex-shrink-0">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <nav className="flex flex-col p-2 space-y-1">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                      className={`flex items-center w-full px-4 py-3 sm:py-2.5 text-sm font-medium rounded-lg transition-all ${
                         activeTab === tab.id
                           ? "bg-blue-50 text-blue-600 shadow-sm"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -651,59 +651,59 @@ const SettingsPage = () => {
                     </button>
                   ))}
                 </nav>
-                <div className="p-4 border-t border-gray-100 mt-2">
+                <div className="p-3 sm:p-4 border-t border-gray-100 mt-1 sm:mt-2">
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut} // Disable button while logging out
-                    className={`flex items-center text-sm font-medium w-full px-2 py-2 rounded-lg transition ${
+                    className={`flex items-center justify-center sm:justify-start text-sm font-medium w-full px-2 py-3 sm:py-2 rounded-lg transition ${
                       isLoggingOut
                         ? "text-gray-400 cursor-not-allowed opacity-50"
-                        : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                        : "text-red-600 hover:text-red-700 hover:bg-red-50 bg-red-50 sm:bg-transparent"
                     }`}
                   >
-                    <LogOut size={18} className="mr-3" /> Sign Out
+                    <LogOut size={18} className="mr-2 sm:mr-3" /> Sign Out
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="flex-1 w-full min-w-0">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6 md:p-8">
                 {renderContent()}
               </div>
             </div>
           </div>
         </div>
 
-        {/* 🔥 NEW: Delete Confirmation Modal with backdrop blur */}
+        {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop with blur */}
             <div
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => !deletingAccount && setShowDeleteConfirm(false)}
             ></div>
             {/* Modal */}
-            <div className="relative bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="relative bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 Are you sure?
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
                 This action cannot be undone. This will permanently delete your
                 account and remove all associated data.
               </p>
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deletingAccount}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1 text-center"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deletingAccount}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="w-full sm:w-auto px-5 py-3 sm:py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
                 >
                   {deletingAccount ? (
                     <>

@@ -21,7 +21,7 @@ export default function AboutUs() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-visible bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 py-10">
+    <div className="relative min-h-screen w-full overflow-hidden bg-slate-50 flex items-center justify-center font-sans selection:bg-indigo-100 selection:text-indigo-900 py-10 md:py-16">
       
       {/* MATRIX GRID BACKGROUND EFFECT (Same as Homepage) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -44,7 +44,7 @@ export default function AboutUs() {
       </div>
 
       {/* CARDS AND CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 w-full relative z-10 space-y-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 space-y-10 md:space-y-16">
         {/* HEADER */}
         <motion.div
           initial="hidden"
@@ -54,32 +54,32 @@ export default function AboutUs() {
           transition={{ duration: 0.6 }}
           className="text-center space-y-4"
         >
-          <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-800 leading-tight tracking-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-800 leading-tight tracking-tight">
             About Our System
           </h1>
-          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg text-slate-600 max-w-3xl mx-auto px-2 sm:px-0">
             Detecting and Preventing Data Exfiltration in Cloud Using{" "}
-            <span className="text-indigo-600 font-semibold">
+            <span className="text-indigo-600 font-semibold block sm:inline mt-1 sm:mt-0">
               User Behavioral Analytics (UBA)
             </span>
           </p>
         </motion.div>
 
         {/* MISSION & VISION */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
             variants={fadeUp}
             transition={{ duration: 0.6 }}
-            className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+            className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
           >
-            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <Target className="text-indigo-600" />
+            <h3 className="text-xl sm:text-2xl font-bold mb-3 flex items-center gap-2">
+              <Target className="text-indigo-600 w-6 h-6 shrink-0" />
               Our Mission
             </h3>
-            <p className="text-slate-600">
+            <p className="text-sm sm:text-base text-slate-600">
               To understand and analyze user activity patterns in cloud
               environments and build a system that identifies abnormal behavior,
               improving data security and preventing unauthorized actions.
@@ -92,13 +92,13 @@ export default function AboutUs() {
             viewport={{ once: true, amount: 0.3 }}
             variants={fadeUp}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+            className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
           >
-            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <Eye className="text-indigo-600" />
+            <h3 className="text-xl sm:text-2xl font-bold mb-3 flex items-center gap-2">
+              <Eye className="text-indigo-600 w-6 h-6 shrink-0" />
               Our Vision
             </h3>
-            <p className="text-slate-600">
+            <p className="text-sm sm:text-base text-slate-600">
               To develop an intelligent and scalable system that uses user
               behavior analysis to improve cloud security, build trust, and make
               systems more reliable and resilient.
@@ -113,10 +113,10 @@ export default function AboutUs() {
           viewport={{ once: true, amount: 0.3 }}
           variants={fadeUp}
           transition={{ duration: 0.6 }}
-          className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+          className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
         >
-          <h2 className="text-2xl font-bold mb-3">Project Overview</h2>
-          <p className="text-slate-600 leading-relaxed">
+          <h2 className="text-xl sm:text-2xl font-bold mb-3">Project Overview</h2>
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
             Our project focuses on enhancing cloud security by analyzing user
             behavior patterns to identify anomalies and prevent unauthorized
             data exfiltration. By leveraging machine learning and behavioral
@@ -134,14 +134,14 @@ export default function AboutUs() {
           viewport={{ once: true }}
           variants={fadeUp}
           transition={{ duration: 0.6 }}
-          className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+          className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
         >
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Workflow className="text-indigo-400" />
+          <h2 className="text-xl sm:text-2xl font-bold mb-6 flex items-center gap-2">
+            <Workflow className="text-indigo-400 w-6 h-6 shrink-0" />
             System Workflow
           </h2>
 
-          <ol className="relative ml-4">
+          <ol className="relative ml-2 sm:ml-4">
             {[
               "User performs cloud activities",
               "Activity logs are collected",
@@ -152,32 +152,32 @@ export default function AboutUs() {
             ].map((step, index) => (
               <li 
                 key={index} 
-                className="relative pl-6 pb-6 border-l border-gray-600 last:border-0 last:pb-0"
+                className="relative pl-8 sm:pl-10 pb-6 border-l border-gray-300 last:border-0 last:pb-0"
               >
-                <span className="absolute -left-3 top-0 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                <span className="absolute -left-3.5 sm:-left-4 top-0 w-7 h-7 sm:w-8 sm:h-8 bg-indigo-500 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold text-white shadow-sm">
                   {index + 1}
                 </span>
-                <p className="text-gray-700 leading-relaxed">{step}</p>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed pt-0.5">{step}</p>
               </li>
             ))}
           </ol>
         </motion.div>
 
         {/* TECHNOLOGIES & FEATURES */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
             variants={fadeUp}
             transition={{ duration: 0.6 }}
-            className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+            className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
           >
-            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <Database className="text-indigo-600" />
+            <h3 className="text-lg sm:text-xl font-bold mb-3 flex items-center gap-2">
+              <Database className="text-indigo-600 w-5 h-5 shrink-0" />
               Technologies Used
             </h3>
-            <ul className="list-disc list-inside text-slate-600 space-y-1">
+            <ul className="list-disc list-inside text-sm sm:text-base text-slate-600 space-y-1.5">
               <li>React.js & Tailwind CSS</li>
               <li>Node.js & Express.js</li>
               <li>MongoDB</li>
@@ -192,13 +192,13 @@ export default function AboutUs() {
             viewport={{ once: true, amount: 0.3 }}
             variants={fadeUp}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+            className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
           >
-            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-              <ShieldCheck className="text-indigo-600" />
+            <h3 className="text-lg sm:text-xl font-bold mb-3 flex items-center gap-2">
+              <ShieldCheck className="text-indigo-600 w-5 h-5 shrink-0" />
               Key Features
             </h3>
-            <ul className="list-disc list-inside text-slate-600 space-y-1">
+            <ul className="list-disc list-inside text-sm sm:text-base text-slate-600 space-y-1.5">
               <li>Real-time activity monitoring</li>
               <li>Anomaly detection</li>
               <li>Secure authentication</li>
@@ -214,41 +214,42 @@ export default function AboutUs() {
           viewport={{ once: true, amount: 0.3 }}
           variants={fadeUp}
           transition={{ duration: 0.6 }}
-          className="group relative bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-100 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
+          className="group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg z-10"
         >
-          <h2 className="text-2xl font-bold mb-4 flex justify-center items-center gap-2">
-            <Users className="text-indigo-600" />
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 flex flex-col sm:flex-row justify-center items-center gap-2">
+            <Users className="text-indigo-600 w-6 h-6" />
             Academic & Team Details
           </h2>
 
-          <p className="mb-4 text-slate-600">
+          <p className="mb-6 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
             As part of the <strong>MCA curriculum at GIET University</strong>,
             this project bridges academic learning with real-world security
             challenges,
-            <br />
-            under the guidance of <strong>Mr. Mahesh Kumar Dakua Sir</strong>.
+            <span className="block mt-1 sm:inline sm:mt-0">
+              {" "}under the guidance of <strong>Mr. Mahesh Kumar Dakua Sir</strong>.
+            </span>
           </p>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100 z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-slate-50/80 backdrop-blur-sm p-5 rounded-xl shadow-sm border border-slate-100 z-10">
               <p className="font-semibold text-indigo-600">Rajesh Roshan</p>
-              <p className="text-slate-600 text-sm">
+              <p className="text-slate-600 text-sm mt-1">
                 Machine Learning & UBA Model
               </p>
             </div>
 
-            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100 z-10">
+            <div className="bg-slate-50/80 backdrop-blur-sm p-5 rounded-xl shadow-sm border border-slate-100 z-10">
               <p className="font-semibold text-indigo-600">
                 S. Ganesh Kumar Prusty
               </p>
-              <p className="text-slate-600 text-sm">
+              <p className="text-slate-600 text-sm mt-1">
                 Backend Development
               </p>
             </div>
 
-            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100 z-10">
+            <div className="bg-slate-50/80 backdrop-blur-sm p-5 rounded-xl shadow-sm border border-slate-100 z-10 sm:col-span-2 md:col-span-1 sm:w-1/2 md:w-full mx-auto w-full">
               <p className="font-semibold text-indigo-600">Om Gouda</p>
-              <p className="text-slate-600 text-sm">
+              <p className="text-slate-600 text-sm mt-1">
                 Frontend Development
               </p>
             </div>

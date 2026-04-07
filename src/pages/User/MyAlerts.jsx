@@ -21,12 +21,10 @@ const MyAlerts = () => {
         // 🔥 CONVERTED: Replaced inline state error with a toast message
         toast.error("Failed to load your security alerts. Please try again later.");
         
-        // 🔥 ADDED: Redirection logic based on error status
-        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-          navigate('/unauthorized');
-        } else {
-          navigate('/server-error');
-        }
+        // 🔥 UPDATED: Manual navigation logic removed.
+        // Your global api.js interceptor will now automatically handle redirects
+        // to /unauthorized?code=... or /server-error?code=... based on HTTP status
+        
       } finally {
         setLoading(false);
       }
@@ -102,114 +100,129 @@ const MyAlerts = () => {
   // 🎨 UI MATCH: Updated loading spinner to exactly match the Dashboard
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
-        <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-        <p className="mt-4 text-sm font-medium text-gray-500">
-          Loading your alerts...
-        </p>
-      </div>
+      <>
+        {/* CSS injection to hide the parent scrollbar visually */}
+        <style>{`
+          ::-webkit-scrollbar { display: none; }
+          * { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
+        <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm font-medium text-gray-500">
+            Loading alerts...
+          </p>
+        </div>
+      </>
     );
   }
 
   // 🔥 REMOVED: Inline error rendering block has been completely removed
 
   return (
-    // 🎨 UI MATCH: Updated main background to bg-gray-100
-    <div className="min-h-screen bg-gray-100 p-4 md:p-6 overflow-x-hidden">
-      <div className="max-w-5xl mx-auto space-y-6">
-        
-        {/* 🎨 UI MATCH: Header styling */}
-        <div className="flex flex-col md:flex-row mb-2 md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">My Alerts</h1>
-            <p className="text-gray-600 mt-1">Security notifications and risk indicators</p>
-          </div>
-          
-          {/* 🎨 UI MATCH: Light theme filter buttons */}
-          <div className="flex space-x-2">
-            {['active', 'resolved', 'all'].map((option) => (
-              <button
-                key={option}
-                onClick={() => setFilter(option)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${
-                  filter === option
-                    ? 'bg-blue-600 text-white border border-blue-600'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-blue-600'
-                }`}
-              >
-                {option.charAt(0).toUpperCase() + option.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+    <>
+      {/* CSS injection to hide the parent scrollbar visually while maintaining scroll functionality */}
+      <style>{`
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-        {/* Alerts List */}
-        <div className="space-y-4">
-          {filteredAlerts.map((alert) => (
-            <div
-              key={alert.id}
-              // 🎨 UI MATCH: Added subtle shadows and hover transitions to cards
-              className={`rounded-xl border p-5 shadow-sm transition-all hover:shadow-md ${getSeverityBg(alert.severity)}`}
-            >
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div className="flex space-x-4">
-                  <div className="flex-shrink-0 mt-1">
-                    {getSeverityIcon(alert.severity)}
-                  </div>
-                  <div>
-                    {/* 🎨 UI MATCH: Dark bold text for titles */}
-                    <h3 className="text-lg font-bold text-gray-800">{alert.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
-                    
-                    <div className="flex flex-wrap items-center mt-3 gap-3">
-                      {/* 🎨 UI MATCH: Light theme badges */}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                        alert.status === 'active' 
-                          ? 'bg-red-100 text-red-700 border-red-200' 
-                          : 'bg-green-100 text-green-700 border-green-200'
-                      }`}>
-                        {alert.status}
-                      </span>
+      {/* Responsive Padding: smaller padding on mobile (p-4), larger on bigger screens (sm:p-6 lg:p-8) */}
+      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 bg-gray-100 min-h-full w-full">
+        <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+          
+          {/* 🎨 UI MATCH: Header styling - Stacks vertically on mobile */}
+          <div className="flex flex-col sm:flex-row mb-2 sm:mb-4 justify-between items-start sm:items-center gap-4 sm:gap-0">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">My Alerts</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Security notifications and risk indicators</p>
+            </div>
+            
+            {/* 🎨 UI MATCH: Light theme filter buttons, adaptive wrap */}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              {['active', 'resolved', 'all'].map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setFilter(option)}
+                  className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all shadow-sm flex-1 sm:flex-none text-center ${
+                    filter === option
+                      ? 'bg-blue-600 text-white border border-blue-600'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-blue-600'
+                  }`}
+                >
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Alerts List */}
+          <div className="space-y-4">
+            {filteredAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                // 🎨 UI MATCH: Added subtle shadows and hover transitions to cards
+                className={`rounded-xl border p-4 sm:p-5 shadow-sm transition-all hover:shadow-md ${getSeverityBg(alert.severity)}`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex space-x-3 sm:space-x-4">
+                    <div className="flex-shrink-0 mt-1">
+                      {getSeverityIcon(alert.severity)}
+                    </div>
+                    <div>
+                      {/* 🎨 UI MATCH: Dark bold text for titles */}
+                      <h3 className="text-base sm:text-lg font-bold text-gray-800">{alert.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">{alert.description}</p>
                       
-                      <span className="flex items-center text-xs font-medium text-gray-500">
-                        <Clock className="mr-1 h-3.5 w-3.5" />
-                        {formatTime(alert.time)}
-                      </span>
-                      
-                      <span className={`text-xs font-bold uppercase ${getSeverityText(alert.severity)}`}>
-                        {alert.severity} risk
-                      </span>
+                      <div className="flex flex-wrap items-center mt-3 gap-2 sm:gap-3">
+                        {/* 🎨 UI MATCH: Light theme badges */}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border ${
+                          alert.status === 'active' 
+                            ? 'bg-red-100 text-red-700 border-red-200' 
+                            : 'bg-green-100 text-green-700 border-green-200'
+                        }`}>
+                          {alert.status}
+                        </span>
+                        
+                        <span className="flex items-center text-[10px] sm:text-xs font-medium text-gray-500">
+                          <Clock className="mr-1 h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                          {formatTime(alert.time)}
+                        </span>
+                        
+                        <span className={`text-[10px] sm:text-xs font-bold uppercase ${getSeverityText(alert.severity)}`}>
+                          {alert.severity} risk
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  
+                  {alert.status === 'active' && (
+                    <button 
+                      onClick={() => handleResolve(alert.id)}
+                      className="w-full sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg text-white font-medium transition-colors shadow-sm self-start whitespace-nowrap mt-2 sm:mt-0"
+                    >
+                      Resolve
+                    </button>
+                  )}
                 </div>
-                
-                {alert.status === 'active' && (
-                  <button 
-                    onClick={() => handleResolve(alert.id)}
-                    className="text-sm bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg text-white font-medium transition-colors shadow-sm self-start whitespace-nowrap"
-                  >
-                    Resolve
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
 
-          {/* 🎨 UI MATCH: Light theme empty state with dashed borders */}
-          {filteredAlerts.length === 0 && (
-            <div className="text-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
-              <CheckCircle className="mx-auto h-12 w-12 text-gray-300" />
-              <h3 className="mt-4 text-lg font-bold text-gray-800">No alerts</h3>
-              <p className="mt-2 text-sm font-medium text-gray-500">
-                {filter === 'active' 
-                  ? "You're all caught up! No active alerts." 
-                  : "No alerts found in this view."}
-              </p>
-            </div>
-          )}
+            {/* 🎨 UI MATCH: Light theme empty state with dashed borders */}
+            {filteredAlerts.length === 0 && (
+              <div className="text-center py-12 sm:py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
+                <CheckCircle className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
+                <h3 className="mt-4 text-base sm:text-lg font-bold text-gray-800">No alerts</h3>
+                <p className="mt-2 text-xs sm:text-sm font-medium text-gray-500">
+                  {filter === 'active' 
+                    ? "You're all caught up! No active alerts." 
+                    : "No alerts found in this view."}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

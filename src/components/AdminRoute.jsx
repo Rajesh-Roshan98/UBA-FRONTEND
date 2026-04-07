@@ -30,7 +30,8 @@ const AdminRoute = ({ children }) => {
     
     // If they are a normal user, kick them to the regular homepage
     if (payload.role !== 'admin') {
-      return <Navigate to="/unauthorized" replace />;
+      // 🔥 FIX: Added ?code=403 to trigger the specific "Access Denied" UI
+      return <Navigate to="/unauthorized?code=403" replace />;
     }
   } catch (error) {
     console.error("Token decoding failed:", error);
