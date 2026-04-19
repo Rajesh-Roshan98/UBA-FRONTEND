@@ -6,5 +6,4 @@ export { default as ServerError } from "./ServerError";
 export { default as RTMonitoring } from "./RTMonitoring";
 export { default as SCAnalytics } from "./SCAnalytics";
 export { default as Unauthorized } from "./Unauthorized";
-export { default as ViewDemo } from "./ViewDemo";
 export { default as HomePage } from "./HomePage";

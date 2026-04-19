@@ -35,7 +35,6 @@ const ServerError = lazy(() => import("./pages/Common").then((m) => ({ default: 
 const RTMonitoring = lazy(() => import("./pages/Common").then((m) => ({ default: m.RTMonitoring })));
 const SCAnalytics = lazy(() => import("./pages/Common").then((m) => ({ default: m.SCAnalytics })));
 const Unauthorized = lazy(() => import("./pages/Common").then((m) => ({ default: m.Unauthorized })));
-const ViewDemo = lazy(() => import("./pages/Common").then((m) => ({ default: m.ViewDemo })));
 
 // Admin Pages
 const AccessControl = lazy(() => import("./pages/Admin").then((m) => ({ default: m.AccessControl })));
@@ -133,7 +132,6 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/insider" element={<Insider />} />
             <Route path="/learn-more" element={<LearnMore />} />
-            <Route path="/view-demo" element={<ViewDemo />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/rt-monitoring" element={<RTMonitoring />} />
             <Route path="/sc-analytics" element={<SCAnalytics />} />
