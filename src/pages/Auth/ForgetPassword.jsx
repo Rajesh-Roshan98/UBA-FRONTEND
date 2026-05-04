@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { KeyRound, ShieldCheck, Lock, MailCheck, Eye, EyeOff } from "lucide-react"; // 👁️ added Eye icons
-import axios from "axios";
+import api from "../../services/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom"; 
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "") || "";
 
 // Add Password Regex
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
@@ -23,7 +21,9 @@ const ForgotPassword = () => {
 
   // Logical steps: 'email', 'otp', 'reset', 'success'
   const [step, setStep] = useState('email');
-  const [email, setEmail] = useState('');
+  
+  // 🔥 FIX: Changed state from 'email' to 'identifier' for clarity and dual-login support
+  const [identifier, setIdentifier] = useState('');
   
   // Update OTP state to an array of 6 elements for the box model
   const [otp, setOtp] = useState(Array(6).fill(""));
@@ -41,14 +41,29 @@ const ForgotPassword = () => {
   // 🔥 NEW: Resend cooldown state
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // 🔥 NEW: Timer Effect
+  // 🔥 PRO UPGRADE: Restore Cooldown on mount
   useEffect(() => {
-    if (resendCooldown === 0) return;
+    const expiry = localStorage.getItem("forgotPasswordCooldownExpiry");
+    if (expiry) {
+      const remaining = Math.floor((expiry - Date.now()) / 1000);
+      if (remaining > 0) {
+        setResendCooldown(remaining);
+      } else {
+        localStorage.removeItem("forgotPasswordCooldownExpiry");
+      }
+    }
+  }, []);
+
+  // 🔥 PRO UPGRADE: Clean React interval for cooldown (No memory leaks)
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
     const timer = setInterval(() => {
-      setResendCooldown((p) => (p <= 1 ? 0 : p - 1));
+      setResendCooldown((p) => p - 1);
     }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   // 1. Request OTP
   const handleRequestOtp = async (e) => {
@@ -56,26 +71,48 @@ const ForgotPassword = () => {
     if (isLoading || resendCooldown > 0) return; // Prevents accidental double click execution and respects cooldown
 
     // Explicit validation: Only shows toast
-    if (!email.trim()) {
-      toast.error("Email is required");
+    if (!identifier.trim()) {
+      toast.error("Email or User ID is required");
+      return;
+    }
+
+    // 🔥 FIX: Smart validation. Only run email regex if they typed an '@'
+    const isEmail = identifier.includes("@");
+    if (isEmail && !emailRegex.test(identifier)) {
+      toast.error("Please enter a valid email address.");
       return;
     }
 
     setIsLoading(true);
     
     try {
-      const res = await axios.post(`${API_BASE}/api/v1/forgot-password/send-otp`, { email });
-      toast.success(res.data.message || "OTP sent to your email");
+      // 🔥 FIX: Send 'identifier' in payload
+      const res = await api.post("/api/v1/auth/forgot-password/send-otp", { identifier: identifier.trim() });
+      toast.success(res.data.message || "OTP sent successfully"); // 🔥 FIX 2: Universal phrasing
       setStep('otp'); 
       
-      // 🔥 NEW: Start the cooldown timer
+      // 🔥 NEW: Start the cooldown timer and persist it
+      const expiry = Date.now() + COOLDOWN_TIME * 1000;
+      localStorage.setItem("forgotPasswordCooldownExpiry", expiry);
       setResendCooldown(COOLDOWN_TIME);
 
       // Auto-focus the first OTP box when transitioning to the OTP step
       setTimeout(() => inputsRef.current[0]?.focus(), 100);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Failed to send OTP";
-      toast.error(errorMsg);
+      // 🔥 UPDATED: Dynamic Rate Limit UX
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || COOLDOWN_TIME;
+        
+        // Start cooldown timer to disable resend button & Persist across reloads
+        const expiry = Date.now() + retryAfter * 1000;
+        localStorage.setItem("forgotPasswordCooldownExpiry", expiry);
+        setResendCooldown(retryAfter);
+
+        toast.error(err.response.data?.message || `Too many OTP requests. Please try again in ${retryAfter} seconds.`);
+      } else {
+        const errorMsg = err.response?.data?.message || "Failed to send OTP";
+        toast.error(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -88,21 +125,28 @@ const ForgotPassword = () => {
 
     const finalOtp = otp.join("");
     if (finalOtp.length !== 6) {
-      toast.error("OTP must be exactly 6 digits.");
+      toast.error("OTP must be 6 digits.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/api/v1/forgot-password/verify-otp`, { 
-        email, 
+      // 🔥 FIX: Send 'identifier' in payload
+      const res = await api.post("/api/v1/auth/forgot-password/verify-otp", { 
+        identifier: identifier.trim(), 
         otp: Number(finalOtp) 
       });
       toast.success(res.data.message || "OTP Verified!");
       setStep('reset');
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Invalid OTP";
-      toast.error(errorMsg);
+      // 🔥 UPDATED: Rate Limit UI catch
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 60;
+        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+      } else {
+        const errorMsg = err.response?.data?.message || "Invalid OTP";
+        toast.error(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -137,14 +181,16 @@ const ForgotPassword = () => {
     const finalOtp = otp.join("");
     setIsLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/api/v1/forgot-password/reset`, { 
-        email, 
+      // 🔥 FIX: Send 'identifier' in payload
+      const res = await api.post("/api/v1/auth/forgot-password/reset", { 
+        identifier: identifier.trim(), 
         otp: Number(finalOtp), 
         newPassword: passwords.new 
       });
       
       toast.success(res.data.message || "Password updated successfully");
       setStep('success');
+      setIsLoading(false); // 🔥 FIX 1: Ensure loading state is turned off on success
 
       // Navigate to login page after a short delay so the user can see the success toast
       // FIXED: Added { replace: true } to clear the history stack
@@ -153,11 +199,20 @@ const ForgotPassword = () => {
       }, 1500);
       
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Failed to update password";
-      toast.error(errorMsg);
+      // 🔥 UPDATED: Rate Limit UI catch
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 60;
+        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+      } else {
+        const errorMsg = err.response?.data?.message || "Failed to update password";
+        toast.error(errorMsg);
+      }
       setIsLoading(false); 
     }
   };
+
+  // 🔥 PRO UX: Boolean to determine if the reset password button should be disabled
+  const isResetDisabled = isLoading || !passwords.new || !PASSWORD_REGEX.test(passwords.new) || passwords.new !== passwords.confirm;
 
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
@@ -188,7 +243,7 @@ const ForgotPassword = () => {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-slate-100 rounded-3xl p-8 shadow-xl shadow-indigo-500/10"
           >
-            {/* Step 1: Enter Email */}
+            {/* Step 1: Enter Email/Identifier */}
             {step === 'email' && (
               <form onSubmit={handleRequestOtp} noValidate>
                 <div className="text-center mb-6">
@@ -197,28 +252,32 @@ const ForgotPassword = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">Forgot Password</h2>
                   <p className="text-sm text-slate-600 mt-1">
-                    Enter your email to receive a recovery code
+                    Enter your email or ID to receive a recovery code
                   </p>
                 </div>
 
                 <div className="relative w-full mb-6">
                   <input 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    placeholder="example@domain.com" 
+                    type="text" // 🔥 FIX: Changed from "email" to "text"
+                    value={identifier} 
+                    onChange={(e) => setIdentifier(e.target.value)} 
+                    placeholder="Email or User ID" // 🔥 FIX: Updated placeholder
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 bg-white"
                   />
                 </div>
 
                 <motion.button
-                  whileHover={isLoading ? {} : { scale: 1.04 }}
-                  whileTap={isLoading ? {} : { scale: 0.96 }}
+                  whileHover={isLoading || resendCooldown > 0 ? {} : { scale: 1.04 }}
+                  whileTap={isLoading || resendCooldown > 0 ? {} : { scale: 0.96 }}
                   type="submit" 
-                  disabled={isLoading}
+                  disabled={isLoading || resendCooldown > 0}
                   className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
                 >
-                  {isLoading ? <><Spinner /> Sending...</> : 'Send OTP'}
+                  {isLoading 
+                    ? <><Spinner /> Sending...</> 
+                    : resendCooldown > 0 
+                    ? `Wait ${resendCooldown}s to Send` 
+                    : 'Send OTP'}
                 </motion.button>
               </form>
             )}
@@ -232,7 +291,7 @@ const ForgotPassword = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">Verify OTP</h2>
                   <p className="text-sm text-slate-600 mt-1">
-                    We sent a 6-digit code to <strong>{email}</strong>
+                    We sent a 6-digit code to <strong>{identifier}</strong>
                   </p>
                 </div>
 
@@ -336,10 +395,10 @@ const ForgotPassword = () => {
                 </div>
 
                 <motion.button
-                  whileHover={isLoading ? {} : { scale: 1.04 }}
-                  whileTap={isLoading ? {} : { scale: 0.96 }}
+                  whileHover={isResetDisabled ? {} : { scale: 1.04 }}
+                  whileTap={isResetDisabled ? {} : { scale: 0.96 }}
                   type="submit" 
-                  disabled={isLoading}
+                  disabled={isResetDisabled} // 🔥 FIX: Disables button if regex fails or passwords don't match
                   className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
                 >
                   {isLoading ? <><Spinner /> Updating...</> : 'Update Password'}

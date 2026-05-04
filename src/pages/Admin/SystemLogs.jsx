@@ -34,7 +34,7 @@ function SystemLogs() {
   const fetchLogs = async (showLoader = false) => {
     try {
       if (showLoader) setLoading(true);
-      const res = await api.get(`${API_BASE}/api/uba/logs`);
+      const res = await api.get(`${API_BASE}/api/v1/uba/logs`);
       setLogs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Failed to fetch logs:", err);

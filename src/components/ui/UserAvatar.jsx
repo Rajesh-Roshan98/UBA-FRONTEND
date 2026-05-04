@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { LogOut, Settings, User, ShieldCheck } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL.replace(/\/$/, "");
+// ✅ FIX: Removed API_BASE since Cloudinary provides the full URL
 
 const UserAvatar = () => {
   const [open, setOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // Added: State for global animation
+  const [isLoggingOut, setIsLoggingOut] = useState(false); 
+  const [imgError, setImgError] = useState(false); // ✅ FIX: Added local state for image fallback
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -28,6 +29,11 @@ const UserAvatar = () => {
   ];
   const bgColor = bgColors[(user?.firstName?.length || 0) % bgColors.length];
 
+  // ✅ FIX: Reset image error state if the user updates their avatar globally
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.avatar]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -39,8 +45,8 @@ const UserAvatar = () => {
   }, []);
 
   const handleLogout = async () => {
-    if (isLoggingOut) return; // Added: Prevent double-click execution
-    setIsLoggingOut(true);    // Added: Trigger the global animation overlay
+    if (isLoggingOut) return; 
+    setIsLoggingOut(true);    
     setOpen(false); 
     await logout();
     navigate("/login");
@@ -50,7 +56,7 @@ const UserAvatar = () => {
 
   return (
     <>
-      {/* Added: Global Full-Page Logout Animation Overlay */}
+      {/* Global Full-Page Logout Animation Overlay */}
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300 px-4">
           <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -61,15 +67,16 @@ const UserAvatar = () => {
       <div className="relative" ref={dropdownRef}>
         {/* Avatar Trigger */}
         <div
-          // 🔥 Reduced touch target size slightly on mobile for a sleeker look
           className="relative flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full cursor-pointer transition-all hover:ring-4 hover:ring-gray-100"
           onClick={() => setOpen((prev) => !prev)}
         >
-          {user.avatar ? (
+          {user.avatar && !imgError ? (
+            // ✅ FIX: Use raw Cloudinary URL and fallback to initials on error
             <img
-              src={`${API_BASE}${user.avatar}`}
+              src={user.avatar}
               alt="User"
               className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-gray-200 shadow-sm"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div
@@ -83,7 +90,6 @@ const UserAvatar = () => {
         {/* Rich Dropdown Menu */}
         {open && (
           <div 
-            // 🔥 Reduced width on mobile (w-[240px]) and shifted slightly to prevent overflowing the right edge
             className="absolute top-[110%] -right-2 sm:right-0 w-[240px] sm:w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 transform transition-all ease-out duration-200 origin-top sm:origin-top-right"
           >
             
@@ -91,7 +97,16 @@ const UserAvatar = () => {
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-full ${bgColor} flex items-center justify-center text-white text-xs sm:text-sm font-bold shrink-0`}>
-                   {user.avatar ? <img src={`${API_BASE}${user.avatar}`} className="w-9 h-9 rounded-full object-cover" /> : getInitials()}
+                   {/* ✅ FIX: Use raw Cloudinary URL and fallback to initials on error */}
+                   {user.avatar && !imgError ? (
+                     <img 
+                       src={user.avatar} 
+                       className="w-9 h-9 rounded-full object-cover" 
+                       onError={() => setImgError(true)} 
+                     />
+                   ) : (
+                     getInitials()
+                   )}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
@@ -143,10 +158,10 @@ const UserAvatar = () => {
             <div className="p-1.5">
               <button
                 onClick={handleLogout}
-                disabled={isLoggingOut} // Added: Disable button while logging out
+                disabled={isLoggingOut} 
                 className={`flex items-center gap-3 w-full px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium text-red-600 transition-colors ${
                   isLoggingOut ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50 cursor-pointer'
-                }`} // Added: conditional styling to reflect disabled state
+                }`} 
               >
                 <LogOut size={16} /> 
                 Sign Out

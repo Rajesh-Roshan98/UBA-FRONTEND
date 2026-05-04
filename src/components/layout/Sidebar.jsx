@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { 
   Home, LayoutDashboard, ShieldCheck, Users, Activity, 
   FileText, Bell, Settings, Info, Mail, LogOut, X, 
@@ -10,15 +10,21 @@ import {
 const Sidebar = ({ open, setOpen }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // Added: State for global animation
+  const [isLoggingOut, setIsLoggingOut] = useState(false); 
+  const [imgError, setImgError] = useState(false); // ✅ FIX: Added local state for image fallback
+
+  // ✅ FIX: Reset image error state if the user updates their avatar globally
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.avatar]);
 
   // Handle logout and close sidebar simultaneously
   const handleLogout = async () => {
-    if (isLoggingOut) return; // Added: Prevent double-click execution
-    setIsLoggingOut(true);    // Added: Trigger the global animation overlay
-    setOpen(false); // Closes the sidebar
-    await logout();      // Existing logout logic
-    setIsLoggingOut(false); // FIX: Reset animation state so it doesn't get stuck on the login page
+    if (isLoggingOut) return; 
+    setIsLoggingOut(true);    
+    setOpen(false); 
+    await logout();      
+    setIsLoggingOut(false); 
   };
 
   const getLinks = () => {
@@ -55,7 +61,7 @@ const Sidebar = ({ open, setOpen }) => {
 
   return (
     <>
-      {/* Added: Global Full-Page Logout Animation Overlay */}
+      {/* Global Full-Page Logout Animation Overlay */}
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm transition-opacity duration-300 px-4 text-center">
           <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -99,9 +105,19 @@ const Sidebar = ({ open, setOpen }) => {
         {user && (
           <div className="px-4 sm:px-6 py-3 shrink-0">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
-                {user.firstName?.[0]}{user.lastName?.[0]}
-              </div>
+              {/* ✅ FIX: Added the Cloudinary image tag with fallback to initials */}
+              {user.avatar && !imgError ? (
+                <img
+                  src={user.avatar}
+                  alt="User Avatar"
+                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0 uppercase">
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 truncate">
                   {user.firstName} {user.lastName}
@@ -139,12 +155,13 @@ const Sidebar = ({ open, setOpen }) => {
         {user && (
           <div className="p-4 sm:p-5 border-t border-slate-100 shrink-0">
             <button 
-              onClick={handleLogout} // Updated this line
-              disabled={isLoggingOut} // Added: Disable button while logging out
-              className={`flex items-center gap-3 w-full px-3 py-3 sm:py-2 text-[15px] sm:text-sm font-medium rounded-lg transition-colors ${
+              onClick={handleLogout} 
+              disabled={isLoggingOut} 
+              // ✅ FIX: Updated styling to match UserAvatar.jsx (text-red-600 permanent)
+              className={`flex items-center gap-3 w-full px-3 py-3 sm:py-2 text-[15px] sm:text-sm font-medium rounded-lg text-red-600 transition-colors ${
                 isLoggingOut 
-                  ? 'opacity-50 cursor-not-allowed text-slate-600' 
-                  : 'text-slate-600 hover:text-red-600 hover:bg-red-50 cursor-pointer active:scale-[0.98] sm:active:scale-100'
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:bg-red-50 cursor-pointer active:scale-[0.98] sm:active:scale-100'
               }`}
             >
               <LogOut size={20} className="sm:w-[18px] sm:h-[18px]" />

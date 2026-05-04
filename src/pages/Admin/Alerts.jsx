@@ -39,7 +39,7 @@ const Alerts = () => {
       const queryString = params.toString() ? `?${params.toString()}` : '';
 
       // 🔥 Switched from fetch to api.get
-      const res = await api.get(`${API_BASE}/api/uba/alerts${queryString}`);
+      const res = await api.get(`${API_BASE}/api/v1/uba/alerts${queryString}`);
       const data = res.data; // Axios auto-parses JSON to .data
 
       if (data.success) {
@@ -71,7 +71,7 @@ const Alerts = () => {
       setAlerts(alerts.map(a => (a.id === id ? { ...a, status: newStatus } : a)));
       
       // 🔥 Switched from fetch to api.put
-      const res = await api.put(`${API_BASE}/api/uba/alerts/${id}/status`, { status: newStatus });
+      const res = await api.put(`${API_BASE}/api/v1/uba/alerts/${id}/status`, { status: newStatus });
       const data = res.data;
       
       if (!data.success) {

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import api from "../services/api";
-import { redirect } from "../services/navigationService"; 
+
+// 🔥 NEW: Import socket functions (adjust the path if your file is named differently or in a different folder)
+import { socket, connectUserSocket, disconnectUserSocket } from "../services/socket"; 
 
 const AuthContext = createContext(null);
 
@@ -11,35 +13,6 @@ const normalizeUser = (user) => ({
   isEmailVerified: user.isEmailVerified ?? user.emailVerified ?? false,
 });
 
-// 🔥 OPTIMIZATION 1: Centralized Network Error Checker
-const checkIsNetworkError = (err) => {
-  return (
-    !navigator.onLine ||
-    err instanceof TypeError ||
-    err.message === "Offline" ||
-    err.message === "Failed to fetch" ||
-    err.message === "Network Error" ||
-    (!err.response && !err.status)
-  );
-};
-
-// 🔥 OPTIMIZATION 5: Centralized Timeout Error Checker
-const isTimeoutError = (err) => {
-  return (
-    err.name === 'AbortError' ||
-    err.code === 'ECONNABORTED' ||
-    err.message?.toLowerCase().includes('timeout') ||
-    err.message?.toLowerCase().includes('aborted')
-  );
-};
-
-// 🔥 OPTIMIZATION 6: Centralized Error Code Resolver
-const getErrorCode = (err) => {
-  if (isTimeoutError(err)) return 504;
-  if (err.response?.status) return err.response.status;
-  return 503;
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +22,7 @@ export const AuthProvider = ({ children }) => {
   // Helper used for login/refresh where the app is already mounted
   const getUserFromServer = async () => {
     try {
-      const res = await api.get("/api/v1/getUserDetail");
+      const res = await api.get("/api/v1/auth/getUserDetail");
 
       if (res.data.success && res.data.user) {
         const normalized = normalizeUser(res.data.user);
@@ -59,13 +32,37 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("getUserFromServer error:", err);
-      if (!err.response || err.response.status >= 500) {
-        throw err;
+      if (!err.response || (err.response.status && err.response.status >= 500)) {
+        throw err; // Internal throw to pass error down to login/refresh handlers
       }
     }
 
     return null;
   };
+
+  /* ================= SOCKET EXPIRY LISTENER ================= */
+  // 🔥 NEW: Handle token expiry from socket (VERY IMPORTANT)
+  useEffect(() => {
+    const handleSocketUnauthorized = () => {
+      console.warn("⚠️ Socket unauthorized → logging out user");
+      
+      // Wipe storage directly instead of calling the API to prevent a 401 loop
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("authUser");
+      setUser(null);
+      
+      // Disconnect socket and redirect
+      disconnectUserSocket();
+      window.location.href = "/login"; 
+    };
+
+    window.addEventListener("socket_unauthorized", handleSocketUnauthorized);
+
+    return () => {
+      window.removeEventListener("socket_unauthorized", handleSocketUnauthorized);
+    };
+  }, []);
 
   /* ================= LOAD USER ON APP START ================= */
   useEffect(() => {
@@ -78,56 +75,43 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       let isFatalError = false; // 🔥 Track fatal errors for both paths
 
-      // 🔥 OPTIMIZATION 9 & 11: Centralized Redirect Helper with Closure Fix
-      const handleFatalRedirect = (code) => {
-        const isOnErrorPage = window.location.pathname.startsWith("/server-error");
-        if (!isOnErrorPage) {
-          redirect(`/server-error?code=${code}`);
-          return true; // Explicitly return true if we executed the redirect
-        }
-        return false; // Return false if we were already on the error page
-      };
-
       // =================================================================
       // 🔥 TEACHER'S FIX: The Global Health Check for Unauthenticated Users
       // =================================================================
       if (!token) {
-        // 🔥 OPTIMIZATION 8: Use the global controller instead of creating a duplicate
-        const timeoutId = setTimeout(() => globalAbortController.abort(), 8000);
-
         try {
-          const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-          
           if (!navigator.onLine) throw new Error("Offline");
 
-          // Ping the lightweight health route
-          const response = await fetch(`${baseUrl}/api/v1/health`, { 
-            method: "GET",
+          // 🔥 FIX 1: Replaced native fetch with Axios to ensure interceptor routing
+          await api.get("/api/v1/auth/health", { 
             signal: globalAbortController.signal
           });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw { response: { status: response.status } }; 
-          }
 
           if (isMounted) {
             setUser(null);
           }
         } catch (err) {
-          clearTimeout(timeoutId);
-          
           // 🔥 SAFEGUARD: If the component unmounted, do not trigger a fake 504 redirect!
           if (!isMounted) return; 
 
-          // 🔥 OPTIMIZATION 12: Reduced the severity of the console log 
-          // (It's expected behavior if the server is down, so a warning is cleaner than an error stack trace in production)
           console.warn("Public Health Check failed: Server is likely offline or unreachable.");
 
-          // 🔥 OPTIMIZATION 10 & 11: Cleanly pass the error and cleanly update the local state without closure issues
-          isFatalError = handleFatalRedirect(getErrorCode(err));
-          return;
+          // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
+          if (!err.response) {
+            console.warn("Network issue detected");
+            isFatalError = true; // Locks UI from flashing while Axios redirects
+            throw err; 
+          }
+
+          if (err.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            setUser(null);
+          } else {
+            console.warn("Server issue detected");
+            isFatalError = true;
+            throw err; 
+          }
           
         } finally {
           if (isMounted && !isFatalError) {
@@ -142,36 +126,26 @@ export const AuthProvider = ({ children }) => {
       // =================================================================
 
       try {
-        // 🔥 FIX: Use native fetch for the initial boot ONLY.
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-        
         // Throw an error immediately if offline so we skip straight to the catch block
         if (!navigator.onLine) throw new Error("Offline");
 
-        const response = await fetch(`${baseUrl}/api/v1/getUserDetail`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+        // 🔥 FIX 1: Replaced native fetch with Axios. Headers & Base URL are now auto-handled.
+        const res = await api.get("/api/v1/auth/getUserDetail", {
           signal: globalAbortController.signal 
         });
 
-        if (!response.ok) {
-          // If it's a 401, we want to clear the token and log out naturally.
-          if (response.status === 401 || response.status === 403) {
-            throw { response: { status: 401 } }; 
-          }
-          // If it's a 500+, throw a fatal error.
-          throw { response: { status: response.status } }; 
-        }
-
-        const data = await response.json();
+        const data = res.data;
 
         if (isMounted) {
           if (data.success && data.user) {
             const normalizedUser = normalizeUser(data.user);
             localStorage.setItem("role", normalizedUser.role);
             setUser(normalizedUser);
+
+            // 🔥 NEW: reconnect socket after reload
+            if (!socket.connected) {
+              connectUserSocket(token, normalizedUser.userId || normalizedUser.adminId || normalizedUser._id);
+            }
           } else {
             setUser(null);
             localStorage.removeItem("token");
@@ -182,12 +156,13 @@ export const AuthProvider = ({ children }) => {
         // 🔥 SAFEGUARD: If the component unmounted, do not trigger a fake 504 redirect!
         if (!isMounted) return; 
 
-        // 🔥 OPTIMIZATION 12: Cleaned up the console log
         console.warn("Auth fetchUser failed: Server is likely offline or unreachable.");
 
-        if (checkIsNetworkError(err)) {
-          isFatalError = handleFatalRedirect(getErrorCode(err));
-          return;
+        // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
+        if (!err.response) {
+          console.warn("Network issue detected");
+          isFatalError = true;
+          throw err; 
         }
 
         if (err.response?.status === 401) {
@@ -195,9 +170,11 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem("role");
           setUser(null);
         } else {
-          isFatalError = handleFatalRedirect(getErrorCode(err));
-          return;
+          console.warn("Server issue detected");
+          isFatalError = true;
+          throw err; 
         }
+
       } finally {
         if (isMounted && !isFatalError) {
           setLoading(false);
@@ -229,6 +206,11 @@ export const AuthProvider = ({ children }) => {
       if (fetchedUser) {
         setUser(fetchedUser);
         localStorage.setItem("role", fetchedUser.role); 
+
+        // 🔥 NEW: CONNECT SOCKET HERE
+        if (!socket.connected) {
+          connectUserSocket(token, fetchedUser.userId || fetchedUser.adminId || fetchedUser._id);
+        }
       } else {
         setUser(null);
         localStorage.removeItem("token");
@@ -237,9 +219,10 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Auth login error:", err);
 
-      if (checkIsNetworkError(err)) {
+      // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
+      if (!err.response) {
         isFatalError = true;
-        return;
+        throw err; 
       }
 
       if (err.response?.status === 401) {
@@ -248,13 +231,15 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       } else {
         console.warn("Temporary login error.");
-        if (!err.response || err.response.status >= 500) {
+        if (err.response.status && err.response.status >= 500) {
           isFatalError = true; 
+          throw err; 
         }
       }
     } finally {
       if (!isFatalError) {
         setLoading(false);
+        setIsInitialized(true); // 🔥 Added to ensure state un-sticks after login
       }
     }
   };
@@ -263,13 +248,17 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoggingOut(true);
-      await api.post("/api/v1/logout");
+      await api.post("/api/v1/auth/logout");
     } catch (err) {
       console.error("Logout API error:", err);
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("authUser");
+
+      // 🔥 NEW: DISCONNECT SOCKET
+      disconnectUserSocket();
+
       setUser(null);
       setIsLoggingOut(false);
     }
@@ -286,13 +275,24 @@ export const AuthProvider = ({ children }) => {
       if (updatedUser) {
         setUser(updatedUser);
         localStorage.setItem("role", updatedUser.role);
+        
+        // 🔥 THE FIX: Un-stick the UI state so the Navbar knows it's safe to render!
+        setIsInitialized(true);
+        setLoading(false);
+        
+        // 🔥 NEW: Ensure socket is reconnected on refresh
+        if (!socket.connected) {
+          connectUserSocket(token, updatedUser.userId || updatedUser.adminId || updatedUser._id);
+        }
+
         return updatedUser;
       }
     } catch (err) {
       console.error("Auth refreshUser error:", err);
 
-      if (checkIsNetworkError(err)) {
-        return null;
+      // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
+      if (!err.response) {
+        throw err; 
       }
 
       if (err.response?.status === 401) {
@@ -310,6 +310,8 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       user,
+      // 🔥 ADDED: Safely expose the generated alphanumeric ID for anywhere in your frontend
+      userId: user?.userId || user?.adminId || null, 
       isAuthenticated: !!user,
       role: user?.role || "user",
       isAdmin: user?.role === "admin",

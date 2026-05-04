@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../index.css";
 import api from "../../services/api";
 import { Mail, Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // 🔥 FIX 1: Imported useNavigate
 
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+// 🔥 FIX: Extracted regex outside component to prevent ReferenceErrors and improve performance
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
 const Signup = () => {
+  const navigate = useNavigate(); // 🔥 FIX 1: Initialized navigate
+  
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -18,43 +21,87 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loadingSignup, setLoadingSignup] = useState(false);
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+  // 🔥 NEW: Cooldown state for rate limiting UX
+  const [cooldown, setCooldown] = useState(0);
+
+  // 🔥 PRO UPGRADE: Restore Cooldown on mount
+  useEffect(() => {
+    const expiry = localStorage.getItem("signupCooldownExpiry");
+    if (expiry) {
+      // 🔥 FIX 2: Added type safety for the expiry string
+      const expiryTime = Number(expiry);
+      const remaining = Math.floor((expiryTime - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+      } else {
+        localStorage.removeItem("signupCooldownExpiry");
+      }
+    }
+  }, []);
+
+  // 🔥 PRO UPGRADE: Clean React interval for cooldown (No memory leaks)
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((p) => p - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !email || !password) {
+    if (loadingSignup || cooldown > 0) return;
+
+    // 🔥 FIX 3: Trim inputs BEFORE validation to prevent bypassing with spaces
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
       return toast.error("All fields are required.");
     }
 
-    if (!emailRegex.test(email)) {
-          toast.error("Please enter a valid email address.");
-          return;
-        }
+    // 🔥 FIX 4: Normalize email before running regex validation
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (!passwordRegex.test(password)) {
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
       return toast.error(
-        "Password must be at least 8 characters and contain an uppercase letter, a lowercase letter, a number, and a special character."
+        "Password must include uppercase, lowercase, number, and special character."
       );
     }
 
     setLoadingSignup(true);
 
     try {
-      await api.post(`${API_BASE}/api/v1/signup`, {
-        firstName,
-        middleName,
-        lastName,
-        email,
+      await api.post("/api/v1/auth/signup", {
+        firstName: firstName.trim(),
+        // 🔥 FIX 5: Safely handle empty middle names
+        middleName: middleName.trim() || undefined,
+        lastName: lastName.trim(),
+        email: cleanEmail, // 🔥 FIX 4: Send the normalized email
         password,
       });
 
       toast.success("Account created successfully!");
-      setTimeout(() => (window.location.href = "/login"), 1500);
+      
+      // 🔥 FIX 1: Use navigate to maintain SPA behavior without full page reload
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 1500);
     } catch (err) {
-      if (
+      // 🔥 UPDATED: Dynamic Rate Limit UX
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 60;
+        
+        // Start cooldown timer to disable button & Persist across reloads
+        const expiry = Date.now() + retryAfter * 1000;
+        localStorage.setItem("signupCooldownExpiry", expiry);
+        setCooldown(retryAfter);
+
+        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+      } else if (
         err.response?.status === 409 ||
         err.response?.data?.message?.toLowerCase().includes("already")
       ) {
@@ -134,6 +181,7 @@ const Signup = () => {
                   placeholder="First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name" // 🔥 PRO POLISH
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
@@ -145,6 +193,7 @@ const Signup = () => {
                   placeholder="Middle Name"
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
+                  autoComplete="additional-name" // 🔥 PRO POLISH
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
@@ -156,6 +205,7 @@ const Signup = () => {
                   placeholder="Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name" // 🔥 PRO POLISH
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
@@ -167,6 +217,7 @@ const Signup = () => {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email" // 🔥 PRO POLISH
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
@@ -178,26 +229,34 @@ const Signup = () => {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password" // 🔥 PRO POLISH
                   className="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600"
+                  className="absolute right-4 top-3 text-slate-500 hover:text-indigo-600 cursor-pointer"
                 >
                   {showPassword ? <EyeOff /> : <Eye />}
                 </button>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.04, cursor: "pointer" }}
-                whileTap={{ scale: 0.96 }}
+                whileHover={loadingSignup || cooldown > 0 ? {} : { scale: 1.04, cursor: "pointer" }}
+                whileTap={loadingSignup || cooldown > 0 ? {} : { scale: 0.96 }}
                 type="submit"
-                disabled={loadingSignup}
-                className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/30 transition disabled:opacity-70"
+                disabled={loadingSignup || cooldown > 0}
+                className="w-full flex justify-center items-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/30 transition disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {loadingSignup ? "Creating..." : "Create Account"}
-                <ArrowRight size={18} />
+                {loadingSignup ? (
+                  "Creating..."
+                ) : cooldown > 0 ? (
+                  `Wait ${cooldown}s`
+                ) : (
+                  <>
+                    Create Account <ArrowRight size={18} />
+                  </>
+                )}
               </motion.button>
             </motion.form>
 

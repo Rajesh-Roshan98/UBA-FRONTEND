@@ -36,9 +36,9 @@ const AdminHomePage = () => {
       try {
         // 🔥 OPTIMIZED: Fetch Stats, Alerts, and Logs simultaneously (Parallel fetching)
         const [statsRes, alertsRes, logsRes] = await Promise.all([
-          api.get(`${API_BASE}/api/admin/stats`),
-          api.get(`${API_BASE}/api/uba/alerts`),
-          api.get(`${API_BASE}/api/uba/logs?limit=5`)
+          api.get(`${API_BASE}/api/v1/admin/stats`),
+          api.get(`${API_BASE}/api/v1/uba/alerts`),
+          api.get(`${API_BASE}/api/v1/uba/logs?limit=5`)
         ]);
 
         const statsData = statsRes.data;

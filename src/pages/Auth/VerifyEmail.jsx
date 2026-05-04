@@ -34,6 +34,20 @@ const VerifyEmail = () => {
 
   const inputsRef = useRef([]);
 
+  // 🔥 PRO UPGRADE: Restore Cooldown on mount
+  useEffect(() => {
+    const expiry = localStorage.getItem("verifyEmailCooldownExpiry");
+    if (expiry) {
+      const expiryTime = Number(expiry);
+      const remaining = Math.floor((expiryTime - Date.now()) / 1000);
+      if (remaining > 0) {
+        setResendCooldown(remaining);
+      } else {
+        localStorage.removeItem("verifyEmailCooldownExpiry");
+      }
+    }
+  }, []);
+
   /* ------------------- EXISTING LOGIC (UNCHANGED) ------------------- */
   useEffect(() => {
     if (!authLoading) {
@@ -67,14 +81,31 @@ const VerifyEmail = () => {
     if (!email || sendingOtp || resendCooldown > 0) return;
     try {
       setSendingOtp(true);
-      const res = await api.post(`/api/v1/sendotp`, { email });
+      const res = await api.post(`/api/v1/auth/sendotp`, { email });
       toast.success(res.data.message || "OTP sent");
       setOtpSent(true);
+      
+      // 🔥 PRO UPGRADE: Start the cooldown timer and persist it
+      const expiry = Date.now() + COOLDOWN_TIME * 1000;
+      localStorage.setItem("verifyEmailCooldownExpiry", expiry);
       setResendCooldown(COOLDOWN_TIME);
+      
       setOtp(Array(6).fill(""));
       inputsRef.current[0]?.focus();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to send OTP");
+      // 🔥 UPDATED: Dynamic Rate Limit UX
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || COOLDOWN_TIME;
+        
+        // Start cooldown timer to disable resend button & Persist across reloads
+        const expiry = Date.now() + retryAfter * 1000;
+        localStorage.setItem("verifyEmailCooldownExpiry", expiry);
+        setResendCooldown(retryAfter);
+
+        toast.error(err.response.data?.message || `Too many OTP requests. Please try again in ${retryAfter} seconds.`);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to send OTP");
+      }
     } finally {
       setSendingOtp(false);
     }
@@ -89,7 +120,7 @@ const VerifyEmail = () => {
 
     try {
       setVerifying(true);
-      await api.post(`/api/v1/verifyotp`, {
+      await api.post(`/api/v1/auth/verifyotp`, {
         email,
         otp: Number(finalOtp),
       });
@@ -97,11 +128,25 @@ const VerifyEmail = () => {
       setVerifiedSuccess(true);
       setTimeout(() => navigate("/", { replace: true }), 1600);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Invalid OTP");
+      // 🔥 UPDATED: Rate Limit UI catch
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 60;
+        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+      } else {
+        toast.error(err.response?.data?.message || "Invalid OTP");
+      }
     } finally {
       setVerifying(false);
     }
   };
+
+  // 🔥 NEW UX UPGRADE: Auto-submit on full OTP
+  useEffect(() => {
+    if (otp.join("").length === 6) {
+      handleVerify();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
 
   if (!pageReady) return null;
 
@@ -169,6 +214,23 @@ const VerifyEmail = () => {
                   if (val && index < 5)
                     inputsRef.current[index + 1]?.focus();
                 }}
+                // 🔥 NEW UX UPGRADE: Backspace navigation
+                onKeyDown={(e) => {
+                  if (e.key === "Backspace" && !otp[index] && index > 0) {
+                    inputsRef.current[index - 1]?.focus();
+                  }
+                }}
+                // 🔥 NEW UX UPGRADE: Paste full OTP support
+                onPaste={(e) => {
+                  const pasteData = e.clipboardData.getData("text").slice(0, 6);
+                  if (!/^\d+$/.test(pasteData)) return;
+
+                  const updated = pasteData.split("");
+                  setOtp([...updated, ...Array(6 - updated.length).fill("")]);
+
+                  inputsRef.current[Math.min(updated.length, 5)]?.focus();
+                  e.preventDefault();
+                }}
                 className="w-10 h-12 text-center text-lg font-semibold rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             ))}
@@ -186,7 +248,7 @@ const VerifyEmail = () => {
           >
             {verifying ? (
               <>
-                <Spinner /> Verifying
+                <Spinner /> Verifying...
               </>
             ) : (
               "Verify Email"
@@ -195,7 +257,8 @@ const VerifyEmail = () => {
 
           <button
             onClick={sendOtp}
-            disabled={sendingOtp || resendCooldown > 0}
+            // 🔥 UX UPGRADE: Disable when there is no email to prevent API crashes
+            disabled={!email || sendingOtp || resendCooldown > 0}
             // 🔥 ADDED: disabled:cursor-not-allowed and disabled:no-underline
             className="w-full mt-4 text-sm text-indigo-600 hover:underline disabled:text-slate-400 disabled:cursor-not-allowed disabled:no-underline"
           >

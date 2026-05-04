@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react"; 
-import UserAvatar from "./UserAvatar";
-import NotificationBell from "./Notification";
-import Sidebar from "./Sidebar"; 
-import { useAuth } from "../context/AuthContext";
+import UserAvatar from "../ui/UserAvatar";
+import NotificationBell from "../ui/Notification";
+import Sidebar from "../layout/Sidebar"; 
+import { useAuth } from "../../context/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();

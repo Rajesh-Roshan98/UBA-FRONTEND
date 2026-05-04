@@ -28,7 +28,7 @@ const UserDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/api/user/udashboard`); 
+        const response = await api.get(`/api/v1/user/udashboard`); 
         setDashboardData(response.data);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);

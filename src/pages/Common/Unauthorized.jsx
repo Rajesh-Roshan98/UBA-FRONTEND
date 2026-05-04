@@ -79,7 +79,7 @@ const Unauthorized = () => {
   const handleVerifyClick = async () => {
     try {
       setIsSending(true);
-      await api.post('/api/v1/sendotp', { email: user?.email });
+      await api.post('/api/v1/auth/sendotp', { email: user?.email });
       
       toast.success('Verification code sent to your email!');
       navigate('/verify-email');

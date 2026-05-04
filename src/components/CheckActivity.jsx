@@ -31,7 +31,7 @@ export default function CheckActivity() {
       try {
         setLoading(true);
         const response = await axios.get(
-          `${API_BASE}/api/v1/public-alert/details?id=${alertId}`,
+          `${API_BASE}/api/v1/auth/public-alert/details?id=${alertId}`,
         );
 
         const data = response.data;

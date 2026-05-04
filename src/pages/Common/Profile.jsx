@@ -1,48 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   Edit2,
   Save,
   Camera,
-  X
-} from 'lucide-react';
-import axios from 'axios';
-import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
-import { maskEmail, maskPhone } from '../utils/maskData'; 
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+  X,
+} from "lucide-react";
+import api from "../../services/api";
+import toast from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
+import { maskEmail, maskPhone } from "../../utils/maskData";
 
 const formatName = (name) => {
   if (!name) return "";
   return name
-    .split(' ') 
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) 
-    .join(' '); 
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 };
 
 const ProfilePage = () => {
   const { refreshUser } = useAuth();
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  
+
   // 🔥 NEW: State for full page loading animation
   const [pageLoading, setPageLoading] = useState(true);
   const fileInputRef = useRef(null);
-  
+
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    middleName: '', 
-    lastName: '',
-    email: '',
-    phone: '',
-    location: '',
-    bio: '',
-    joinDate: '',
-    avatar: '' 
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    location: "",
+    bio: "",
+    joinDate: "",
+    avatar: "",
   });
 
   const [editForm, setEditForm] = useState({ ...profileData });
@@ -52,28 +50,26 @@ const ProfilePage = () => {
       try {
         // Start loading
         setPageLoading(true);
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE}/api/v1/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
+        // ✅ FIX 1: Removed manual token fetching. Interceptor handles this.
+        const res = await api.get("/api/v1/auth/profile");
+
         if (res.data.success) {
           const profile = res.data.profile;
-          
+
           // ✅ Explicit Mapping to preserve specific strings like "unknown"
           const mappedData = {
-            firstName: profile.firstName || '',
-            middleName: profile.middleName || '',
-            lastName: profile.lastName || '',
-            email: profile.email || '',
-            phone: profile.phone || '',
-            location: profile.location || '', 
-            bio: profile.bio || '',
-            joinDate: profile.joinDate || '',
-            avatar: profile.avatar || '',
-            createdAt: profile.createdAt || ''
+            firstName: profile.firstName || "",
+            middleName: profile.middleName || "",
+            lastName: profile.lastName || "",
+            email: profile.email || "",
+            phone: profile.phone || "",
+            location: profile.location || "",
+            bio: profile.bio || "",
+            joinDate: profile.joinDate || "",
+            avatar: profile.avatar || "",
+            createdAt: profile.createdAt || "",
           };
-          
+
           setProfileData(mappedData);
           setEditForm(mappedData);
         }
@@ -100,10 +96,8 @@ const ProfilePage = () => {
 
   const handleSaveBioClick = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.put(`${API_BASE}/api/v1/profile`, editForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // ✅ FIX 1: Removed manual token fetching. Interceptor handles this.
+      const res = await api.put("/api/v1/auth/profile", editForm);
 
       if (res.data.success) {
         setProfileData(res.data.profile);
@@ -118,10 +112,12 @@ const ProfilePage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
+    setEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAvatarClick = () => {
+    // ✅ FIX 3: Disable click during upload to prevent double-clicks
+    if (isUploadingAvatar) return;
     fileInputRef.current.click();
   };
 
@@ -129,51 +125,43 @@ const ProfilePage = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file (JPG, PNG, GIF).');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (JPG, PNG, GIF).");
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error('Image must be less than 3MB.');
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error("Image must be less than 1MB.");
       return;
     }
 
     setIsUploadingAvatar(true);
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append("avatar", file);
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(`${API_BASE}/api/v1/profile/avatar`, formData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // ✅ FIX: Cleaned up post request - Axios automatically handles multipart headers when given FormData
+      const res = await api.post("/api/v1/auth/profile/avatar", formData);
 
       if (res.data.avatarUrl) {
-        setProfileData(prev => ({ ...prev, avatar: res.data.avatarUrl }));
-        toast.success('Avatar updated successfully!');
+        setProfileData((prev) => ({ ...prev, avatar: res.data.avatarUrl }));
+        toast.success("Avatar updated successfully!");
         await refreshUser();
       }
     } catch (error) {
       console.error("Avatar upload error:", error);
-      toast.error(error.response?.data?.message || 'Failed to upload avatar.');
+      toast.error(error.response?.data?.message || "Failed to upload avatar.");
     } finally {
       setIsUploadingAvatar(false);
-      e.target.value = null; 
+      e.target.value = null;
     }
   };
 
-  const displayFullName = [
-    profileData.firstName, 
-    profileData.middleName, 
-    profileData.lastName
-  ]
-    .filter(Boolean) 
-    .map(formatName) 
-    .join(" ") || profileData.name; 
+  const displayFullName =
+    [profileData.firstName, profileData.middleName, profileData.lastName]
+      .filter(Boolean)
+      .map(formatName)
+      .join(" ") || profileData.name;
 
   const getInitials = () => {
     const firstInitial = profileData.firstName?.charAt(0) || "";
@@ -185,7 +173,7 @@ const ProfilePage = () => {
     if (!date) return null;
     const d = new Date(date);
     if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
   // 🔥 Full Page Loader UI Overlay
@@ -194,19 +182,24 @@ const ProfilePage = () => {
       <div className="fixed inset-0 z-[999] flex items-center justify-center bg-white p-4">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="text-gray-500 font-medium animate-pulse text-sm sm:text-base text-center">Loading your profile...</p>
+          <p className="text-gray-500 font-medium animate-pulse text-sm sm:text-base text-center">
+            Loading your profile...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    // 🔥 REMOVED overflow-hidden and avoided forcing min-h/overflow-y-auto to fix PC scrollbar issue
     <div className="relative w-full h-full bg-gray-50 p-4 sm:p-6 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Profile</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your personal information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Profile
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            Manage your personal information
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -215,11 +208,18 @@ const ProfilePage = () => {
               <div className="flex flex-col items-center mb-5 sm:mb-6">
                 <div className="relative mb-3 sm:mb-4">
                   {/* Fluid avatar sizing */}
-                  <div className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center overflow-hidden shadow-md border-4 border-white transition-opacity ${isUploadingAvatar ? 'opacity-50' : 'opacity-100'} ${!profileData.avatar && 'bg-gradient-to-r from-blue-500 to-purple-600'}`}>
+                  <div
+                    className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center overflow-hidden shadow-md border-4 border-white transition-opacity ${isUploadingAvatar ? "opacity-50" : "opacity-100"} ${!profileData.avatar && "bg-gradient-to-r from-blue-500 to-purple-600"}`}
+                  >
                     {profileData.avatar ? (
-                      <img 
-                        src={`${API_BASE}${profileData.avatar}`} 
-                        alt="Profile Avatar" 
+                      <img
+                        src={profileData.avatar}
+                        // ✅ FIX: Improved image fallback to revert gracefully to initials
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          setProfileData(prev => ({ ...prev, avatar: "" }));
+                        }}
+                        alt="Profile Avatar"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -230,7 +230,7 @@ const ProfilePage = () => {
                   </div>
 
                   {/* Camera button positioning for touch targets */}
-                  <button 
+                  <button
                     onClick={handleAvatarClick}
                     disabled={isUploadingAvatar}
                     className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 bg-gray-800 hover:bg-gray-700 text-white p-2 sm:p-2.5 rounded-full shadow-lg border-2 border-white transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-95"
@@ -238,15 +238,15 @@ const ProfilePage = () => {
                   >
                     <Camera size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </button>
-                  
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept="image/png, image/jpeg, image/gif" 
-                    className="hidden" 
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/png, image/jpeg, image/gif"
+                    className="hidden"
                   />
-                  
+
                   {isUploadingAvatar && (
                     <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded-md shadow text-[10px] sm:text-xs font-medium text-blue-600 whitespace-nowrap">
                       Uploading...
@@ -255,9 +255,9 @@ const ProfilePage = () => {
                 </div>
 
                 <p className="text-[10px] sm:text-xs text-gray-400 mb-3 sm:mb-3 -mt-1 text-center">
-                  Max file size: 3MB
+                  Max file size: 1MB
                 </p>
-                
+
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center px-2">
                   {displayFullName || "Loading..."}
                 </h2>
@@ -266,27 +266,48 @@ const ProfilePage = () => {
               {/* Contact Info */}
               <div className="space-y-3 sm:space-y-4 mb-2">
                 <div className="flex items-start sm:items-center text-gray-700">
-                  <Mail size={18} className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0" />
-                  <span className="text-sm break-all sm:break-normal">{maskEmail(profileData.email) || "No email"}</span>
-                </div>
-                
-                <div className="flex items-start sm:items-center text-gray-700">
-                  <Phone size={18} className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0" />
-                  <span className="text-sm">{maskPhone(profileData.phone) || "No phone number"}</span>
-                </div>
-                
-                <div className="flex items-start sm:items-center text-gray-700">
-                  <MapPin size={18} className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0" />
-                  <span className="text-sm leading-snug">
-                    {/* Explicitly check for white space/empty to show placeholder */}
-                    {profileData.location && profileData.location.trim() !== "" ? profileData.location : "Location not set"}
+                  <Mail
+                    size={18}
+                    className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0"
+                  />
+                  <span className="text-sm break-all sm:break-normal">
+                    {maskEmail(profileData.email) || "No email"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-start sm:items-center text-gray-700">
-                  <Calendar size={18} className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0" />
+                  <Phone
+                    size={18}
+                    className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0"
+                  />
+                  <span className="text-sm">
+                    {maskPhone(profileData.phone) || "No phone number"}
+                  </span>
+                </div>
+
+                <div className="flex items-start sm:items-center text-gray-700">
+                  <MapPin
+                    size={18}
+                    className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0"
+                  />
                   <span className="text-sm leading-snug">
-                    Joined {formatJoinDate(profileData.joinDate) || formatJoinDate(profileData.createdAt) || "Recently"}
+                    {/* Explicitly check for white space/empty to show placeholder */}
+                    {profileData.location && profileData.location.trim() !== ""
+                      ? profileData.location
+                      : "Location not set"}
+                  </span>
+                </div>
+
+                <div className="flex items-start sm:items-center text-gray-700">
+                  <Calendar
+                    size={18}
+                    className="text-gray-400 mr-3 mt-0.5 sm:mt-0 shrink-0"
+                  />
+                  <span className="text-sm leading-snug">
+                    Joined{" "}
+                    {formatJoinDate(profileData.joinDate) ||
+                      formatJoinDate(profileData.createdAt) ||
+                      "Recently"}
                   </span>
                 </div>
               </div>
@@ -296,9 +317,11 @@ const ProfilePage = () => {
           <div className="lg:col-span-2 space-y-5 sm:space-y-6">
             <div className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
               <div className="flex justify-between items-center mb-4 sm:mb-5">
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">About Me</h3>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                  About Me
+                </h3>
                 {!isEditingBio && (
-                  <button 
+                  <button
                     onClick={handleEditBioClick}
                     className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium transition p-1 sm:p-0 active:scale-95"
                   >
@@ -309,7 +332,6 @@ const ProfilePage = () => {
 
               {isEditingBio ? (
                 <div>
-                  {/* text-base on mobile to prevent iOS Safari auto-zoom */}
                   <textarea
                     name="bio"
                     value={editForm.bio || ""}
@@ -318,7 +340,6 @@ const ProfilePage = () => {
                     className="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 sm:p-4 mb-4 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-base sm:text-sm"
                     placeholder="Tell us about yourself..."
                   />
-                  {/* Mobile-friendly buttons (full width on small screens) */}
                   <div className="flex flex-col sm:flex-row justify-end gap-3 sm:space-x-3">
                     <button
                       onClick={handleCancelBioClick}
@@ -336,7 +357,8 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {profileData.bio || "No bio added yet. Click edit to add some information about yourself."}
+                  {profileData.bio ||
+                    "No bio added yet. Click edit to add some information about yourself."}
                 </p>
               )}
             </div>

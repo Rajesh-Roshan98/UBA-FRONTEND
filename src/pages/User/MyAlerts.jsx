@@ -14,7 +14,7 @@ const MyAlerts = () => {
     const fetchAlertsData = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/api/user/ualerts`);
+        const response = await api.get(`/api/v1/user/ualerts`);
         setAlerts(response.data);
       } catch (err) {
         console.error("Error fetching alerts:", err);
@@ -36,7 +36,7 @@ const MyAlerts = () => {
   const handleResolve = async (id) => {
     try {
       // Send resolve request to the backend
-      await api.put(`/api/user/ualerts/${id}/resolve`);
+      await api.put(`/api/v1/user/ualerts/${id}/resolve`);
       
       // Update the local state so the UI reflects the resolved status immediately
       setAlerts(currentAlerts => 

@@ -52,7 +52,7 @@ const ContactUs = () => {
 
     try {
       setLoading(true);
-      await api.post(`${API_BASE}/api/v1/contact`, formData);
+      await api.post(`${API_BASE}/api/v1/auth/contact`, formData);
       toast.success("Message sent successfully!");
       
       // UPDATED: Keep name and email filled after sending if logged in, clear only message

@@ -26,7 +26,7 @@ const AnomalyReview = () => {
     try {
       setLoading(true);
       // 🔥 Switched from fetch to api.get
-      const res = await api.get(`${API_BASE}/api/uba/alerts/anomalies`);
+      const res = await api.get(`${API_BASE}/api/v1/uba/alerts/anomalies`);
       const data = res.data; // 🔥 Axios automatically parses JSON into the .data property
       
       if (data.success) {
@@ -69,7 +69,7 @@ const AnomalyReview = () => {
       if (selectedAnomaly?.id === id) setSelectedAnomaly({ ...selectedAnomaly, status });
       
       // 🔥 Switched from fetch to api.put
-      await api.put(`${API_BASE}/api/uba/alerts/${id}/status`, { status });
+      await api.put(`${API_BASE}/api/v1/uba/alerts/${id}/status`, { status });
     } catch (err) { 
       // Revert on failure
       fetchAnomalies(); 

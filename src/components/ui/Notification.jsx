@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import api from "../services/api"; // 🔥 NEW: Import API service for backend calls
+import { useAuth } from "../../context/AuthContext";
+import api from "../../services/api"; // 🔥 NEW: Import API service for backend calls
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +17,7 @@ const NotificationBell = () => {
     if (!user) return;
     try {
       setLoading(true);
-      const res = await api.get('/api/v1/notifications'); // Assumes baseURL is set to /api
+      const res = await api.get('/api/v1/auth/notifications'); // Assumes baseURL is set to /api
       setNotifications(res.data);
     } catch (error) {
       console.error('Failed to fetch notifications', error);
@@ -26,13 +26,39 @@ const NotificationBell = () => {
     }
   };
 
-  // 🔥 NEW: Fetch on mount and when user changes
+  // 🔥 TEACHER FIX 2 & 4: Fetch on mount, clear on logout, NO POLLING
   useEffect(() => {
+    if (!user) {
+      setNotifications([]); // Prevent ghost notifications for new users
+      return;
+    }
     fetchNotifications();
-    // Optional: poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
   }, [user]);
+
+  // ====================================================================
+  // 🔥 TEACHER FIX 1 & 3: Listen for real-time socket notifications safely!
+  // ====================================================================
+  useEffect(() => {
+    const handleNewNotification = (event) => {
+      const newNotif = event.detail;
+      
+      setNotifications((prev) => {
+        // Prevent duplicate notifications if socket and API race each other
+        const exists = prev.some((n) => n._id === newNotif._id);
+        if (exists) return prev;
+        
+        return [newNotif, ...prev];
+      });
+    };
+
+    // Listen to the custom event we dispatched in socket.js
+    window.addEventListener("global_new_notification", handleNewNotification);
+
+    return () => {
+      window.removeEventListener("global_new_notification", handleNewNotification);
+    };
+  }, []);
+  // ====================================================================
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -55,7 +81,7 @@ const NotificationBell = () => {
   // 🔥 NEW: Mark a single notification as read
   const markAsRead = async (id) => {
     try {
-      await api.patch(`/api/v1/notifications/${id}/read`);
+      await api.patch(`/api/v1/auth/notifications/${id}/read`);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch (error) {
       console.error('Failed to mark as read', error);
@@ -65,7 +91,7 @@ const NotificationBell = () => {
   // 🔥 NEW: Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await api.post('/api/v1/notifications/read-all');
+      await api.post('/api/v1/auth/notifications/read-all');
       setNotifications([]);
     } catch (error) {
       console.error('Failed to mark all as read', error);

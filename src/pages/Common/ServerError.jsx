@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'; 
-import { useAuth } from '../../context/AuthContext';
-import { ServerCrash, WifiOff, AlertCircle } from 'lucide-react'; 
+import { useLocation, useSearchParams } from 'react-router-dom'; 
+import { useAuth } from '../../context/AuthContext'; // 🔥 ADDED: Import AuthContext
+import api from "../../services/api"; // 🔥 ADDED: Import Axios instance
+import { ServerCrash, WifiOff, AlertCircle, Loader2, Clock, Wrench } from 'lucide-react'; // 🔥 ADDED: Clock & Wrench for better UI
 import { redirect } from "../../services/navigationService"; 
+import { motion } from 'framer-motion'; // 🔥 ADDED: Framer Motion for smooth transitions
 
 /**
  * Error page component that displays different HTTP error codes.
@@ -12,10 +14,12 @@ import { redirect } from "../../services/navigationService";
  * @param {number} [props.code] - HTTP status code (404, 500, 502, 503, 504, etc.)
  */
 const ServerError = ({ code: propCode }) => { 
-  const navigate = useNavigate();
   const location = useLocation(); 
   const [searchParams] = useSearchParams(); 
   const headingRef = useRef(null);
+
+  // 🔥 ADDED: Extract refreshUser to sync global state on recovery
+  const { refreshUser } = useAuth(); 
 
   // Bulletproof URL parameter extraction. 
   const extractCodeFromUrl = () => {
@@ -30,35 +34,69 @@ const ServerError = ({ code: propCode }) => {
       extracted = hashParams.get("code");
     }
     
+    // 🔥 IMPROVED: Return string codes directly, otherwise parse to integer
+    if (extracted === "NETWORK_ERROR" || extracted === "SERVER_UNREACHABLE") {
+      return extracted;
+    }
     return parseInt(extracted, 10);
   };
 
   const parsedUrlCode = extractCodeFromUrl();
-  const initialCode = !isNaN(parsedUrlCode) ? parsedUrlCode : (propCode || 500);
+  const initialCode = (typeof parsedUrlCode === 'string' || !isNaN(parsedUrlCode)) ? parsedUrlCode : (propCode || 500);
 
   const [code, setCode] = useState(initialCode);
+
+  // 🔥 ADDED: State to manage the smooth exit animation before redirecting
+  const [isExiting, setIsExiting] = useState(false);
+
+  // 🔥 ADDED: Helper function to trigger animation, wait, and then redirect smoothly
+  const smoothRedirect = (path) => {
+    setIsExiting(true);
+    setTimeout(() => {
+      redirect(path);
+    }, 300); // 300ms matches the Framer Motion transition duration
+  };
 
   // 🔥 THE NEW FIX: Make the UI blindly trust the URL from api.js!
   // Instead of overwriting the URL, we listen to it. If api.js changes the URL from 503 to 504, 
   // this effect catches it and updates the screen automatically.
   useEffect(() => {
-    const currentUrlCode = parseInt(searchParams.get("code"), 10);
-    if (!isNaN(currentUrlCode) && currentUrlCode !== code) {
+    const rawCode = searchParams.get("code");
+    let currentUrlCode;
+
+    // 🔥 IMPROVED: Handle string-based network codes
+    if (rawCode === "NETWORK_ERROR" || rawCode === "SERVER_UNREACHABLE") {
+      currentUrlCode = rawCode;
+    } else {
+      currentUrlCode = parseInt(rawCode, 10);
+    }
+
+    if (currentUrlCode !== code && (typeof currentUrlCode === 'string' || !isNaN(currentUrlCode))) {
       setCode(currentUrlCode); 
     }
   }, [searchParams, code]);
 
-  // We still import this just in case, but we will NOT let it block the UI anymore!
-  const { loading } = useAuth(); 
-
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // NEW: State to handle the manual retry loading UI
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  // Set initial pinging to FALSE. We want this page to render instantly!
-  const [isPinging, setIsPinging] = useState(false);
+  // 🔥 IMPROVED: State for UX error message and ref for auto-retry limit
+  const [errorMessage, setErrorMessage] = useState("");
+  const autoRetryCount = useRef(0);
 
-  // 🔥 REMOVED: handlePingError
-  // We no longer want this component guessing if it's a 503 or 504.
-  // api.js handles all dynamic parsing now!
+  // 🔥 FIX (IMPORTANT): Google-Level Silent Retry Logic
+  const retryRefresh = async (retries = 3, delay = 2000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const user = await refreshUser();
+        if (user) return true;
+      } catch (e) {}
+
+      await new Promise(res => setTimeout(res, delay));
+    }
+    return false;
+  };
 
   useEffect(() => {
     const handlePageShow = (event) => {
@@ -74,110 +112,13 @@ const ServerError = ({ code: propCode }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (code !== 404) {
-      const checkServerRecovery = async () => {
-        if (!navigator.onLine) return;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-        try {
-          const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-          
-          const response = await fetch(`${baseUrl}/api/v1/getUserDetail`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          // If the server returns a healthy status, redirect back to the app!
-          if (response.status > 0 && response.status < 500) {
-            let lastPath = sessionStorage.getItem('lastValidPath') || '/';
-            if (lastPath.includes('/server-error')) {
-              lastPath = '/';
-            }
-            redirect(lastPath);
-          } 
-          // 🔥 REMOVED: else if (response.status >= 500) { setCode(response.status) }
-          // We do nothing on failure. We let api.js dictate the error state.
-          
-        } catch (error) {
-          clearTimeout(timeoutId);
-          // 🔥 REMOVED: handlePingError(error)
-          // Fail silently. Do not update the UI error code locally.
-        }
-      };
-
-      checkServerRecovery();
-    }
-  }, [code]); 
-
-  // Background Polling (Health Checks) for Server Crashes
-  useEffect(() => {
-    if (!isOnline || code === 404) return;
-
-    let pollInterval;
-    let isRequestPending = false; 
-
-    const pollServer = async () => {
-      // If the previous request is still stuck waiting, do NOT fire another one!
-      if (isRequestPending) return; 
-      
-      isRequestPending = true;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-      try {
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-        const response = await fetch(`${baseUrl}/api/v1/getUserDetail`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          signal: controller.signal 
-        });
-
-        clearTimeout(timeoutId);
-
-        // If healthy, redirect home!
-        if (response.status > 0 && response.status < 500) {
-          let lastPath = sessionStorage.getItem('lastValidPath') || '/';
-          if (lastPath.includes('/server-error')) {
-            lastPath = '/';
-          }
-          redirect(lastPath);
-        } 
-        // 🔥 REMOVED: else if (response.status >= 500) { setCode(response.status) }
-        
-      } catch (error) {
-        clearTimeout(timeoutId);
-        // 🔥 REMOVED: handlePingError(error)
-      } finally {
-        isRequestPending = false; 
-      }
-    };
-
-    // Poll every 10 seconds to check if the backend woke up
-    pollInterval = setInterval(pollServer, 10000);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        pollServer();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(pollInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isOnline, code]); 
+  // 🔥 ADDED: Better Error Classification
+  const isNetworkError = code === "NETWORK_ERROR";
+  const isServerUnreachable = code === "SERVER_UNREACHABLE";
+  const isTimeout = code === 504;
+  const isMaintenance = code === 503;
+  const isBadGateway = code === 502;
+  const isNotFound = code === 404;
 
   const errorMessages = {
     404: {
@@ -202,7 +143,21 @@ const ServerError = ({ code: propCode }) => {
     },
   };
 
-  const { title, description } = errorMessages[code] || errorMessages[500];
+  // 🔥 IMPROVED: Dynamic title and description based on industry-standard network codes
+  let title, description;
+
+  if (isNetworkError) {
+    // 🔥 FIX: Matched these strings EXACTLY to your JSX fallback below.
+    // Now, when the app reconnects and switches from the JSX fallback to these variables, 
+    // the text is identical, preventing any visible flashing.
+    title = "No Connection";
+    description = "You appear to be offline. Please check your network connection and try reloading the page.";
+  } else if (isServerUnreachable) {
+    title = "Server Unreachable";
+    description = "We are unable to connect to the server. Please try again later.";
+  } else {
+    ({ title, description } = errorMessages[code] || errorMessages[500]);
+  }
 
   useEffect(() => {
     if (headingRef.current) {
@@ -223,20 +178,86 @@ const ServerError = ({ code: propCode }) => {
     }
   }, [code]);
 
+  // 🔥 THE AUTO-RECONNECT FIX: Sync the AuthContext before redirecting automatically
   useEffect(() => {
+    let recoveryTimeout; // Hold the timeout ID for cleanup
+
     const handleOnline = () => {
       setIsOnline(true);
+      setErrorMessage(""); // Clear old errors
       
-      // If we are not on a 404 page, try to redirect back to the app when we come online
-      if (code !== 404) {
-        let lastPath = sessionStorage.getItem('lastValidPath') || '/';
-        if (lastPath.includes('/server-error')) lastPath = '/';
-        redirect(lastPath); 
+      if (!isNotFound) { // 🔥 Using new classification variable here
+        // 🔥 IMPROVED: Limit auto-retries to prevent infinite loops
+        if (autoRetryCount.current >= 3) {
+          setErrorMessage("Auto-reconnect failed. Please try again manually.");
+          setIsRetrying(false); // 🔧 Fix 5: Ensure button is reset when auto-retry hits limit
+          return;
+        }
+        autoRetryCount.current += 1;
+
+        setIsRetrying(true); // Trigger the loading UI while we sync and wait
+        
+        // 🔥 INDUSTRY STANDARD FIX: Add a debounce so the backend DB has time to recover
+        recoveryTimeout = setTimeout(async () => {
+          if (!navigator.onLine) {
+            setIsRetrying(false); // 🔧 Fix 5: Reset UI instantly if connection drops again during wait
+            return;
+          }
+
+          // wait extra time before calling API
+          await new Promise(res => setTimeout(res, 2000));
+
+          const token = localStorage.getItem('token');
+          
+          // SCENARIO 1: AUTO-RETRY FOR GUEST (UNAUTHENTICATED)
+          if (!token) {
+            try {
+              // 🔥 FIX: ADDED MISSING HEALTH CHECK FOR GUEST AUTO-RETRY
+              // Previously, this blindly redirected without ensuring the server was actually back up!
+              await api.get("/api/v1/auth/health", {
+                skipGlobalErrorHandler: true
+              });
+              
+              let lastPath = sessionStorage.getItem('lastValidPath') || '/';
+              if (lastPath.includes('/server-error')) lastPath = '/';
+              sessionStorage.removeItem('lastValidPath'); // 🔥 CLEANUP
+              smoothRedirect(lastPath); // 🔥 UPDATED TO SMOOTH REDIRECT
+            } catch (error) {
+              setErrorMessage("Server still unavailable. Try again.");
+              setIsRetrying(false);
+            }
+            return;
+          }
+
+          // SCENARIO 2: AUTO-RETRY FOR AUTHENTICATED USER
+          try {
+            // 🔥 ADDED SILENT RETRY LOGIC HERE
+            const success = await retryRefresh();
+            
+            if (success) {
+              let lastPath = sessionStorage.getItem('lastValidPath') || '/';
+              if (lastPath.includes('/server-error')) lastPath = '/';
+              sessionStorage.removeItem('lastValidPath'); // 🔥 CLEANUP
+              smoothRedirect(lastPath); // 🔥 UPDATED TO SMOOTH REDIRECT
+            } else if (!localStorage.getItem('token')) {
+              smoothRedirect('/login'); // 🔥 UPDATED TO SMOOTH REDIRECT
+            } else {
+              // Fallback to prevent infinite loading
+              setErrorMessage("Server still unavailable. Try again.");
+              setIsRetrying(false);
+            }
+          } catch (error) {
+            setErrorMessage("Server still unavailable. Try again.");
+            setIsRetrying(false);
+          }
+        }, 4000); // Wait 4 seconds before hitting the backend
       }
     };
 
     const handleOffline = () => {
       setIsOnline(false);
+      // Clear the timeout if they lose connection again while waiting
+      if (recoveryTimeout) clearTimeout(recoveryTimeout);
     };
 
     window.addEventListener('online', handleOnline);
@@ -245,18 +266,84 @@ const ServerError = ({ code: propCode }) => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (recoveryTimeout) clearTimeout(recoveryTimeout); // Prevent memory leaks on unmount
     };
-  }, [code]);
+  }, [code, refreshUser, isNotFound]);
 
-  if (isPinging) {
-    return (
-      <div className="w-full h-full overflow-hidden flex flex-col items-center justify-center bg-gray-50 text-gray-800">
-        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  // 🔥 THE FINAL FIX: Use AuthContext to sync state before redirecting
+  const handleRetry = async () => {
+    if (!navigator.onLine) {
+      window.location.reload();
+      return;
+    }
 
-  const ErrorIcon = !isOnline ? WifiOff : (code === 404 ? AlertCircle : ServerCrash);
+    setErrorMessage(""); // Clear previous errors
+    setIsRetrying(true);
+    autoRetryCount.current = 0; // 🔥 Reset auto-retry limit on manual action
+
+    const token = localStorage.getItem('token');
+
+    // SCENARIO 1: User is unauthenticated (Guest)
+    if (!token) {
+      try {
+        // 🔥 FIX: Replaced fetch with api.get using skipGlobalErrorHandler flag to maintain SSOT
+        await api.get("/api/v1/auth/health", {
+          skipGlobalErrorHandler: true
+        });
+        
+        let lastPath = sessionStorage.getItem('lastValidPath') || '/';
+        if (lastPath.includes('/server-error')) lastPath = '/';
+        sessionStorage.removeItem('lastValidPath'); // 🔥 CLEANUP
+        smoothRedirect(lastPath); // 🔥 UPDATED TO SMOOTH REDIRECT
+      } catch (error) {
+        setErrorMessage("Server still unavailable. Try again.");
+        setIsRetrying(false);
+      }
+      return;
+    }
+
+    // SCENARIO 2: User is Authenticated. 
+    // We MUST use refreshUser() so the Navbar gets the updated avatar profile data!
+    try {
+      // 🔥 ADDED SILENT RETRY LOGIC HERE
+      const success = await retryRefresh();
+
+      if (success) {
+        // Server is awake AND global state is updated! Safe to redirect.
+        let lastPath = sessionStorage.getItem('lastValidPath') || '/';
+        if (lastPath.includes('/server-error')) {
+          lastPath = '/';
+        }
+        sessionStorage.removeItem('lastValidPath'); // 🔥 CLEANUP
+        smoothRedirect(lastPath); // 🔥 UPDATED TO SMOOTH REDIRECT
+      } else {
+        // If refreshUser returns null, check if it wiped the token (401)
+        if (!localStorage.getItem('token')) {
+          smoothRedirect('/login'); // 🔥 UPDATED TO SMOOTH REDIRECT
+        } else {
+          // Token is still there, server is just still down (503)
+          // Fallback to prevent infinite loading
+          setErrorMessage("Server still unavailable. Try again.");
+          setIsRetrying(false);
+        }
+      }
+    } catch (error) {
+      setErrorMessage("Server still unavailable. Try again.");
+      setIsRetrying(false);
+    }
+  };
+
+  // 🔥 IMPROVED: Better icon classification mapping using the new variables
+  const getErrorIcon = () => {
+    // 🔥 FIX: Added !isOnline here to ensure the icon snaps to WifiOff instantly if connection drops, matching the text perfectly.
+    if (!isOnline || isNetworkError || isServerUnreachable) return WifiOff;
+    if (isTimeout) return Clock;
+    if (isMaintenance) return Wrench;
+    if (isNotFound) return AlertCircle;
+    return ServerCrash; // Default for 500, 502, etc.
+  };
+
+  const ErrorIcon = getErrorIcon();
 
   return (
     <>
@@ -265,7 +352,11 @@ const ServerError = ({ code: propCode }) => {
         * { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       
-      <main
+      {/* 🔥 REPLACED <main> with <motion.main> to handle smooth exits */}
+      <motion.main
+        initial={{ opacity: 1 }}
+        animate={{ opacity: isExiting ? 0 : 1 }}
+        transition={{ duration: 0.3 }}
         role="main"
         className="w-full h-full overflow-hidden flex flex-col items-center justify-center bg-gray-50 p-4 sm:p-6"
       >
@@ -280,22 +371,46 @@ const ServerError = ({ code: propCode }) => {
             tabIndex={-1} 
             className="text-2xl sm:text-3xl font-semibold text-gray-900 outline-none mb-3"
           >
+            {/* Kept existing !isOnline fallback to ensure immediate browser detection overrides */}
             {!isOnline ? "No Connection" : title}
           </h1>
           
-          <p className="text-sm sm:text-base text-gray-500 mb-8 max-w-sm">
+          <p className="text-sm sm:text-base text-gray-500 mb-6 max-w-sm">
             {!isOnline
               ? "You appear to be offline. Please check your network connection and try reloading the page."
               : description}
           </p>
 
-          <div className="mt-12 pt-6 border-t border-gray-200 w-full">
+          {/* 🔥 IMPROVED: Display clear feedback to the user when retries fail */}
+          {errorMessage && (
+            <p className="text-sm text-red-500 mb-4 font-medium animate-in fade-in">
+              {errorMessage}
+            </p>
+          )}
+
+          <button
+            onClick={handleRetry}
+            disabled={isRetrying}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-70 disabled:cursor-not-allowed min-w-[120px]"
+          >
+            {isRetrying ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              'Try Again'
+            )}
+          </button>
+
+          <div className="mt-10 pt-6 border-t border-gray-200 w-full">
             <p className="text-xs text-gray-400">
-              Error Code: {!isOnline ? "ERR_NETWORK_DISCONNECTED" : code}
+              {/* 🔥 FIX: Added "|| isNetworkError" to ensure it never flashes "NETWORK_ERROR" */}
+              Error Code: {!isOnline || isNetworkError ? "ERR_NETWORK_DISCONNECTED" : code}
             </p>
           </div>
         </div>
-      </main>
+      </motion.main>
     </>
   );
 };

@@ -1,58 +1,139 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../index.css";
 import api from "../../services/api";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+// 🔥 FIX: Added RefreshCw for the CAPTCHA reload button
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
+  // 🔥 FIX: Changed state from 'email' to 'identifier'
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 🔥 NEW: Cooldown state for rate limiting UX
+  const [cooldown, setCooldown] = useState(0);
+
+  // 🔥 NEW: CAPTCHA States
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaData, setCaptchaData] = useState({ captchaImage: "", captchaToken: "" });
+
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
+  // 🔥 NEW: Function to fetch CAPTCHA from backend
+  const fetchCaptcha = async () => {
+    try {
+      // Adjust this endpoint URL if your router uses a different path for exports.getCaptcha
+      const res = await api.get("/api/v1/auth/get-captcha");
+      if (res.data.success) {
+        setCaptchaData({
+          captchaImage: res.data.captchaImage,
+          captchaToken: res.data.captchaToken,
+        });
+        setCaptchaInput(""); // Clear input on refresh
+      }
+    } catch (error) {
+      console.error("Failed to fetch CAPTCHA", error);
+      // 🔥 UPDATED: Read the exact retryAfter payload to show a smart countdown
+      if (error.response && error.response.status === 429) {
+        const retryAfter = error.response.data?.retryAfter || 60;
+        const timeText = retryAfter < 60 ? `${retryAfter} seconds` : `${Math.ceil(retryAfter / 60)} minutes`;
+        toast.error(`CAPTCHA limit reached. Please wait ${timeText}.`);
+      } else {
+        toast.error("Failed to load security CAPTCHA");
+      }
+    }
+  };
+
+  // 🔥 PRO UPGRADE: Fetch CAPTCHA & Restore Cooldown on mount
+  useEffect(() => {
+    const expiry = localStorage.getItem("loginCooldownExpiry");
+
+    if (expiry) {
+      const remaining = Math.floor((expiry - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+      } else {
+        localStorage.removeItem("loginCooldownExpiry");
+      }
+    }
+
+    fetchCaptcha();
+  }, []);
+
+  // 🔥 PRO UPGRADE: Clean React interval for cooldown (No memory leaks)
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const interval = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval); // Cleanup on unmount/re-render
+  }, [cooldown]);
 
   const loginHandler = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || cooldown > 0) return;
 
-    if (!email || !password) {
-      toast.error("Email and password are required");
+    if (!identifier || !password) {
+      toast.error("Email/User ID and password are required");
       return;
     }
 
-    if (!emailRegex.test(email)) {
+    // 🔥 NEW: CAPTCHA Validation before hitting backend
+    if (!captchaInput) {
+      toast.error("Please enter the CAPTCHA characters");
+      return;
+    }
+    
+    // 🔥 NEW: CAPTCHA Fallback if the token didn't load properly
+    if (!captchaData.captchaToken) {
+      toast.error("Security verification failed. Please refresh.");
+      return;
+    }
+
+    // 🔥 FIX: Smart validation. Only run email regex if they typed an '@'
+    const isEmail = identifier.includes("@");
+    if (isEmail && !emailRegex.test(identifier)) {
       toast.error("Please enter a valid email address.");
       return;
     }
 
-    // Password strength validation
-    if (!passwordRegex.test(password)) {
-      toast.error(
-        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
-      );
-      return;
-    }
+    // 🔥 FIX: Removed password strength validation here. 
+    // Users with old/weaker passwords must still be allowed to log in!
 
     try {
       setLoading(true);
-      const res = await api.post(`${API_BASE}/api/v1/login`, {
-        email: email.trim(),
+      const res = await api.post("/api/v1/auth/login", {
+        // 🔥 PRO POLISH: Removed .toLowerCase() to preserve case-sensitive usernames!
+        identifier: identifier.trim(), 
         password,
+        // 🔥 NEW: Inject CAPTCHA data into the payload
+        captchaInput: captchaInput.trim(),
+        captchaToken: captchaData.captchaToken,
       });
 
       if (!res.data.success) {
         toast.error(res.data.message || "Login failed");
+        
+        // 🔥 NEW: Refresh CAPTCHA from backend payload if provided, otherwise fetch fresh
+        if (res.data.newCaptcha) {
+          setCaptchaData({
+            captchaImage: res.data.newCaptcha.captchaImage,
+            captchaToken: res.data.newCaptcha.captchaToken,
+          });
+          setCaptchaInput("");
+        } else {
+          fetchCaptcha();
+        }
         return;
       }
 
@@ -64,7 +145,9 @@ const Login = () => {
 
       // 2. Handle Redirection based on OTP requirements
       if (res.data.requiresOtp) {
-        navigate("/verify-otp", { state: { email } });
+        // 🔥 FIX: Pass their actual real email from the database response, NOT the identifier they typed!
+        // We use an optional chain fallback just in case.
+        navigate("/verify-otp", { state: { email: res.data.user?.email || identifier } });
       } else {
         
         // 🔥 FIX: Safely decode the JWT token to guarantee we get the correct role
@@ -89,8 +172,31 @@ const Login = () => {
       }
 
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Invalid credentials";
-      toast.error(errorMsg);
+      // 🔥 UPDATED: Dynamic Rate Limit UX based on retryAfter
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 600; // default to 10 mins if missing
+        
+        // Start cooldown timer to disable button & Persist across reloads
+        const expiry = Date.now() + retryAfter * 1000;
+        localStorage.setItem("loginCooldownExpiry", expiry);
+        setCooldown(retryAfter);
+
+        toast.error(err.response.data?.message || `Too many login attempts. Please try again in ${retryAfter} seconds.`);
+      } else {
+        const errorMsg = err.response?.data?.message || "Invalid credentials";
+        toast.error(errorMsg);
+      }
+      
+      // 🔥 NEW: Automatically update CAPTCHA if backend generated a new one during rejection
+      if (err.response?.data?.newCaptcha) {
+        setCaptchaData({
+          captchaImage: err.response.data.newCaptcha.captchaImage,
+          captchaToken: err.response.data.newCaptcha.captchaToken,
+        });
+        setCaptchaInput("");
+      } else if (err.response?.status !== 429) { // Only fetch new captcha if not rate limited
+        fetchCaptcha();
+      }
     } finally {
       setLoading(false);
     }
@@ -163,10 +269,10 @@ const Login = () => {
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text" // 🔥 FIX: Changed from "email" to "text"
+                  placeholder="Email or User ID" // 🔥 FIX: Updated placeholder
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200
                   focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
@@ -191,6 +297,32 @@ const Login = () => {
                 </button>
               </div>
 
+              {/* 🔥 NEW: CAPTCHA UI */}
+              <div className="flex flex-col gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="bg-slate-100 rounded-xl overflow-hidden border border-slate-200 h-[50px] flex-1 flex justify-center items-center select-none"
+                    dangerouslySetInnerHTML={{ __html: captchaData.captchaImage || "<span>Loading...</span>" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={fetchCaptcha}
+                    className="p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition cursor-pointer"
+                    title="Refresh CAPTCHA"
+                  >
+                    <RefreshCw size={20} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Enter the characters above"
+                  value={captchaInput}
+                  onChange={(e) => setCaptchaInput(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  autoComplete="off"
+                />
+              </div>
+
               {/* Forgot Password Link */}
               <motion.div variants={item} className="text-right">
                 <Link
@@ -202,16 +334,20 @@ const Login = () => {
               </motion.div>
 
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={loading}
+                whileHover={loading || cooldown > 0 ? {} : { scale: 1.02 }}
+                whileTap={loading || cooldown > 0 ? {} : { scale: 0.98 }}
+                disabled={loading || cooldown > 0}
                 type="submit"
                 className="w-full flex justify-center items-center gap-2
                 bg-indigo-600 text-white py-3 rounded-xl font-semibold
                 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/30
-                transition disabled:opacity-70 cursor-pointer"
+                transition disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
-                {loading ? "Authenticating..." : "Login"}
+                {loading
+                  ? "Authenticating..."
+                  : cooldown > 0
+                  ? `Retry in ${cooldown}s`
+                  : "Login"}
               </motion.button>
             </motion.form>
 

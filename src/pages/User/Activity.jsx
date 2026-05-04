@@ -35,7 +35,7 @@ const Activity = () => {
         const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         
         // 🔥 FIX: Send the timezone to the backend
-        const response = await api.get(`/api/user/uactivity?tz=${userTz}`);
+        const response = await api.get(`/api/v1/user/uactivity?tz=${userTz}`);
         
         setActivityData(response.data);
       } catch (err) {

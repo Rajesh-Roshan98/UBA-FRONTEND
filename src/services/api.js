@@ -1,7 +1,14 @@
 import axios from "axios";
 import { redirect } from "./navigationService";
 
-let isRedirecting = false; // Flag to prevent multiple redirects
+// 🔥 BIG UPGRADE: Timestamp lock to prevent race conditions under load
+let lastRedirectTime = 0;
+const shouldRedirect = () => {
+  const now = Date.now();
+  if (now - lastRedirectTime < 1500) return false;
+  lastRedirectTime = now;
+  return true;
+};
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -12,12 +19,21 @@ const api = axios.create({
 // Add a request interceptor
 api.interceptors.request.use(
   (config) => {
+    // 🔥 Fix 1: Block API calls when offline (MOST IMPORTANT)
+    if (!navigator.onLine) {
+      const offlineError = new Error("Offline");
+      offlineError.code = "OFFLINE";
+      offlineError.isAxiosError = true; // ✅ Fix 1: Restore isAxiosError for library compatibility
+      offlineError.config = config; // ✅ Fix 2: Attach config to prevent undefined errors later
+      return Promise.reject(offlineError);
+    }
+
     // 1. Grab the token from localStorage
     const token = localStorage.getItem("token");
 
     // 2. If the token exists, add it to the Headers
     if (token) {
-      if (!config.headers) config.headers = {};
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -33,40 +49,63 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // 🔥 THE FIX: Bypass global error handler if the flag is set (e.g., from ServerError retry)
+    if (error.config?.skipGlobalErrorHandler) {
+      return Promise.reject(error);
+    }
+
+    // Hoisted these checks so the OFFLINE handler can use them safely
     const currentPath = window.location.pathname;
     const isErrorPage = currentPath.startsWith('/server-error');
     const isUnauthorizedPage = currentPath.startsWith('/unauthorized');
 
+    // 🔥 Fix 2: Handle OFFLINE separately (NO redirect to 503)
+    if (error.code === "OFFLINE") {
+      if (shouldRedirect() && !isErrorPage && !isUnauthorizedPage) {
+        redirect(`/server-error?code=NETWORK_ERROR`);
+      }
+      return Promise.reject(error);
+    }
+
+    // ✅ Ignore cancelled requests (VERY IMPORTANT FIX)
+    if (error.code === "ERR_CANCELED" || error.message === "canceled") {
+      return Promise.reject(error);
+    }
+
     // ========================================================================
     // 1. DYNAMIC ERROR PARSER: NO RESPONSE (Network Crash / Timeout)
-    // Handles: 503 (Refused) and 504 (Timeout)
     // ========================================================================
-    if (!error.response && !isRedirecting) {
-      isRedirecting = true;
+    if (!error.response) {
+      let errorCode;
 
-      console.error("Network error or backend down");
-
-      // Dynamically determine if it's a Timeout (504) or Server Down (503)
-      let errorCode = 503; 
-      if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout') || error.name === 'AbortError') {
-        errorCode = 504;
+      // ✅ DIFFERENTIATE PROPERLY (Double offline check removed, handled purely in request interceptor)
+      if (
+        error.code === "ECONNABORTED" ||
+        error.message?.toLowerCase().includes("timeout") ||
+        error.name === "AbortError"
+      ) {
+        errorCode = 504; // Timeout
+      } else if (error.code === "ERR_NETWORK") {
+        errorCode = "SERVER_UNREACHABLE"; // Backend down / DNS issue
+      } else {
+        return Promise.reject(error); // ignore unknown cases
       }
 
-      // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
-      if (!isErrorPage && !isUnauthorizedPage) {
-        sessionStorage.setItem("lastValidPath", currentPath);
-      }
+      // Check lock AFTER evaluating the conditions to prevent locking on ignored cases
+      if (shouldRedirect()) {
+        console.error("Network error (no response from server)");
 
-      // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read it, 
-      // even if we are already sitting on the /server-error page!
-      if (!isUnauthorizedPage) {
-        redirect(`/server-error?code=${errorCode}`);
-      }
+        // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
+        if (!isErrorPage && !isUnauthorizedPage) {
+          sessionStorage.setItem("lastValidPath", currentPath);
+        }
 
-      // Reset flag after a delay to allow future redirects
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 2000);
+        // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read it, 
+        // even if we are already sitting on the /server-error page!
+        if (!isUnauthorizedPage) {
+          redirect(`/server-error?code=${errorCode}`);
+        }
+      }
 
       return Promise.reject(error);
     }
@@ -79,65 +118,77 @@ api.interceptors.response.use(
       requestUrl?.includes("/login") || requestUrl?.includes("/signup");
 
     // Handle 401 Unauthorized (expired token)
-    if (status === 401 && token && !isAuthRoute && !isRedirecting) {
-      isRedirecting = true;
+    if (status === 401 && token && !isAuthRoute) {
+      if (shouldRedirect()) {
+        console.warn("Session expired. Logging out...");
 
-      console.warn("Session expired. Logging out...");
+        localStorage.removeItem("token");
 
-      localStorage.removeItem("token");
-
-      // Store the current path before redirect (skip error pages)
-      if (!isErrorPage && !isUnauthorizedPage) {
-        sessionStorage.setItem("lastValidPath", currentPath);
+        // Store the current path before redirect (skip error pages)
+        if (!isErrorPage && !isUnauthorizedPage) {
+          sessionStorage.setItem("lastValidPath", currentPath);
+        }
+        redirect("/login");
       }
-      redirect("/login");
-
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 2000);
+      
+      return Promise.reject(error); // ✅ Fix 3: Added return to prevent continuing to 500 block
     }
 
     // Handle 403 Forbidden (Access Denied)
-    if (status === 403 && !isRedirecting) {
-      isRedirecting = true;
+    if (status === 403) {
+      if (shouldRedirect()) {
+        console.warn("Access denied. Redirecting to unauthorized page...");
 
-      console.warn("Access denied. Redirecting to unauthorized page...");
-
-      // Store the current path before redirect (skip error pages)
-      if (!isErrorPage && !isUnauthorizedPage) {
-        sessionStorage.setItem("lastValidPath", currentPath);
+        // Store the current path before redirect (skip error pages)
+        if (!isErrorPage && !isUnauthorizedPage) {
+          sessionStorage.setItem("lastValidPath", currentPath);
+        }
+        
+        // Redirect to dynamic unauthorized page with 403 code
+        redirect("/unauthorized?code=403");
       }
       
-      // Redirect to dynamic unauthorized page with 403 code
-      redirect("/unauthorized?code=403");
+      return Promise.reject(error); // ✅ Fix 3: Added return to prevent continuing to 500 block
+    }
 
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 2000);
+    // ========================================================================
+    // 🔥 NEW: Handle 429 Too Many Requests (Rate Limiting)
+    // ========================================================================
+    if (status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || 60;
+
+      // Optional: store globally (helps UI if needed)
+      sessionStorage.setItem("rateLimitRetryAfter", retryAfter);
+
+      // 1. Drop high-frequency background telemetry logs silently so the UI doesn't spam errors
+      if (requestUrl?.includes('/api/v1/uba/log')) {
+        return Promise.reject(error);
+      }
+
+      // 2. For standard user routes (Login, OTP, General API limits), pass the error
+      // straight down to the component. This allows the local `catch` block in your
+      // React components to extract `error.response.data.message` and display a Toast notification.
+      return Promise.reject(error);
     }
 
     // ========================================================================
     // 2. DYNAMIC ERROR PARSER: SERVER RESPONDED WITH ERROR
     // status >= 500 automatically catches 500, 502, 503, 504, etc.
     // ========================================================================
-    if ((status >= 500) && !isRedirecting) {
-      isRedirecting = true;
+    if (status >= 500) {
+      if (shouldRedirect()) {
+        console.error(`Server error dynamically caught: ${status}`);
 
-      console.error(`Server error dynamically caught: ${status}`);
+        // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
+        if (!isErrorPage && !isUnauthorizedPage) {
+          sessionStorage.setItem("lastValidPath", currentPath);
+        }
 
-      // 🔥 THE FIX PART 1: Protect the return path ONLY if we aren't already on an error page
-      if (!isErrorPage && !isUnauthorizedPage) {
-        sessionStorage.setItem("lastValidPath", currentPath);
+        // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read the exact status
+        if (!isUnauthorizedPage) {
+          redirect(`/server-error?code=${status}`);
+        }
       }
-
-      // 🔥 THE FIX PART 2: ALWAYS update the URL parameter so ServerError.jsx can read the exact status
-      if (!isUnauthorizedPage) {
-        redirect(`/server-error?code=${status}`);
-      }
-
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 2000);
     }
 
     return Promise.reject(error);

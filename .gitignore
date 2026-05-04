@@ -1,4 +1,6 @@
-# Logs
+# ==============================
+# 1. Logs
+# ==============================
 logs
 *.log
 npm-debug.log*
@@ -7,12 +9,30 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# ==============================
+# 2. Dependencies & Build Output
+# ==============================
+node_modules/
+dist/
+dist-ssr/
+
+# ==============================
+# 3. Environment Variables
+# ==============================
+.env
+.env.*
+!.env.example
 *.local
 
-# Editor directories and files
+# ==============================
+# 4. Caches & Testing
+# ==============================
+.eslintcache
+coverage/
+
+# ==============================
+# 5. Editor & OS Files
+# ==============================
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,5 +42,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
-.env.*

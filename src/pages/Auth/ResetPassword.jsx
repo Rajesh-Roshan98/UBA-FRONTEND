@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"; // 🔥 Removed ArrowLeft
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import api from "../../services/api"; // Adjust path if it's in a different folder
+
+// 🔥 FIX: Extracted regex outside component to prevent ReferenceErrors and improve performance
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
 const Spinner = () => (
   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -13,6 +16,9 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   
+  // 🔥 NEW: Cooldown state for rate limiting UX
+  const [cooldown, setCooldown] = useState(0);
+
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -25,6 +31,28 @@ const ResetPassword = () => {
     confirm: false,
   });
 
+  // 🔥 PRO UPGRADE: Restore Cooldown on mount
+  useEffect(() => {
+    const expiry = localStorage.getItem("resetPasswordCooldownExpiry");
+    if (expiry) {
+      const remaining = Math.floor((expiry - Date.now()) / 1000);
+      if (remaining > 0) {
+        setCooldown(remaining);
+      } else {
+        localStorage.removeItem("resetPasswordCooldownExpiry");
+      }
+    }
+  }, []);
+
+  // 🔥 PRO UPGRADE: Clean React interval for cooldown (No memory leaks)
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((p) => p - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -36,17 +64,22 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (loading || cooldown > 0) return;
+
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    // 🔥 NEW: Strong password regex
-    // Requires: at least 8 chars, 1 letter, 1 number, 1 special character
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+    // 🔥 PRO POLISH: Validate current password length to save a useless API call
+    if (formData.currentPassword.trim().length < 6) {
+      toast.error("Current password seems invalid");
+      return;
+    }
 
-    if (!strongPasswordRegex.test(formData.newPassword)) {
-      toast.error("Password must be at least 8 characters long and include a letter, a number, and a special character.");
+    // 🔥 FIX: Accurate error message mapping exactly to what the regex requires
+    if (!STRONG_PASSWORD_REGEX.test(formData.newPassword)) {
+      toast.error("Password must include uppercase, lowercase, number, and special character.");
       return;
     }
 
@@ -58,8 +91,9 @@ const ResetPassword = () => {
     try {
       setLoading(true);
       // Calls the backend to change the password
-      const response = await api.put("/api/v1/change-password", {
-        currentPassword: formData.currentPassword,
+      const response = await api.put("/api/v1/auth/change-password", {
+        // 🔥 PRO POLISH: Added .trim() to prevent trailing space errors
+        currentPassword: formData.currentPassword.trim(),
         newPassword: formData.newPassword,
       });
 
@@ -69,11 +103,28 @@ const ResetPassword = () => {
       navigate("/settings", { replace: true });
     } catch (err) {
       console.error("Password change error:", err);
-      toast.error(err?.response?.data?.message || err.message || "Failed to update password");
+
+      // 🔥 UPDATED: Dynamic Rate Limit UX
+      if (err.response?.status === 429) {
+        const retryAfter = err.response.data?.retryAfter || 60;
+        
+        // Start cooldown timer to disable button & Persist across reloads
+        const expiry = Date.now() + retryAfter * 1000;
+        localStorage.setItem("resetPasswordCooldownExpiry", expiry);
+        setCooldown(retryAfter);
+
+        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+      } else {
+        toast.error(err?.response?.data?.message || err.message || "Failed to update password");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // 🔥 PRO UX: Boolean to determine if the reset password button should be disabled
+  const isResetDisabled = loading || cooldown > 0 || !formData.newPassword || !STRONG_PASSWORD_REGEX.test(formData.newPassword) || formData.newPassword !== formData.confirmPassword;
+
 
   return (
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
@@ -124,6 +175,7 @@ const ResetPassword = () => {
                   name="currentPassword"
                   value={formData.currentPassword}
                   onChange={handleChange}
+                  autoComplete="current-password" // 🔥 PRO POLISH: Added autocomplete
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   placeholder="Enter current password"
                 />
@@ -149,6 +201,7 @@ const ResetPassword = () => {
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
+                  autoComplete="new-password" // 🔥 PRO POLISH: Added autocomplete
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   placeholder="Enter new password"
                 />
@@ -174,6 +227,7 @@ const ResetPassword = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                  autoComplete="new-password" // 🔥 PRO POLISH: Added autocomplete
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   placeholder="Confirm new password"
                 />
@@ -188,16 +242,18 @@ const ResetPassword = () => {
             </div>
 
             <motion.button
-              whileHover={loading ? {} : { scale: 1.02 }}
-              whileTap={loading ? {} : { scale: 0.98 }}
+              whileHover={isResetDisabled ? {} : { scale: 1.02 }}
+              whileTap={isResetDisabled ? {} : { scale: 0.98 }}
               type="submit"
-              disabled={loading}
+              disabled={isResetDisabled}
               className="w-full mt-2 flex justify-center items-center gap-2 bg-indigo-600 text-white py-3.5 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
                   <Spinner /> Updating...
                 </>
+              ) : cooldown > 0 ? (
+                `Wait ${cooldown}s`
               ) : (
                 "Update Password"
               )}
