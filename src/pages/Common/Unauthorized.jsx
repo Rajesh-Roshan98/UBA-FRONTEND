@@ -98,42 +98,48 @@ const Unauthorized = () => {
         * { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
+      {/* 🔥 CSS FIX: Added min-h-[100dvh] for perfect mobile browser fitting, scaled paddings */}
       <main
         role="main"
-        className="w-full h-full overflow-hidden flex flex-col items-center justify-center bg-gray-50 p-4 sm:p-6"
+        className="w-full min-h-[100dvh] overflow-hidden flex flex-col items-center justify-center bg-gray-50 p-6 sm:p-8 md:p-12"
       >
         <div className="max-w-md w-full text-center flex flex-col items-center animate-in fade-in duration-200">
           
-          <div className="w-16 h-16 bg-white border border-gray-200 rounded-2xl flex items-center justify-center shadow-sm mb-6">
-            <ErrorIcon className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+          {/* 🔥 CSS FIX: Scaled icon container based on screen size */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white border border-gray-200 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-sm mb-6 sm:mb-8">
+            <ErrorIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" strokeWidth={1.5} />
           </div>
 
+          {/* 🔥 CSS FIX: Fluid heading sizes */}
           <h1
             ref={headingRef}
             tabIndex={-1} 
-            className="text-2xl sm:text-3xl font-semibold text-gray-900 outline-none mb-3"
+            className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 outline-none mb-3 sm:mb-4 leading-tight"
           >
             {title}
           </h1>
           
-          <p className="text-sm sm:text-base text-gray-500 mb-8 max-w-sm">
+          {/* 🔥 CSS FIX: Better text widths and line-heights for readability on narrow screens */}
+          <p className="text-sm sm:text-base md:text-lg text-gray-500 mb-8 sm:mb-10 max-w-[16rem] sm:max-w-sm mx-auto leading-relaxed">
             {description}
           </p>
 
+          {/* Container for actions */}
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             {needsVerification && activeCode === 403 && (
               <button 
                 onClick={handleVerifyClick} 
                 disabled={isSending}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 sm:py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl sm:rounded-lg text-base sm:text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed sm:min-w-[140px]"
               >
-                {isSending ? <Loader className="animate-spin" size={16} /> : <ShieldAlert size={16} />}
+                {isSending ? <Loader className="animate-spin" size={18} /> : <ShieldAlert size={18} />}
                 {isSending ? 'Sending...' : 'Verify Email'}
               </button>
             )}
           </div>
 
-          <div className="mt-12 pt-6 border-t border-gray-200 w-full">
+          {/* 🔥 CSS FIX: Scaled margins */}
+          <div className="mt-12 sm:mt-14 pt-6 border-t border-gray-200 w-full">
             <p className="text-xs text-gray-400">
               Error Code: {activeCode}
             </p>

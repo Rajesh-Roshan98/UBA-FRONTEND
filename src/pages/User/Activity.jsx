@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast'; 
 import api from "../../services/api";
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Activity = () => {
   const navigate = useNavigate(); 
@@ -82,6 +83,28 @@ const Activity = () => {
     return Server; // Fallback icon
   };
 
+  // Framer Motion Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+  };
+
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
+    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15, ease: "easeIn" } }
+  };
+
   // 🎨 UI MATCH: Updated loading spinner to match the Dashboard's blue/white styling perfectly
   if (loading) {
     return (
@@ -91,12 +114,17 @@ const Activity = () => {
           ::-webkit-scrollbar { display: none; }
           * { -ms-overflow-style: none; scrollbar-width: none; }
         `}</style>
-        <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }}
+          className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl"
+        >
           <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
           <p className="mt-4 text-sm font-medium text-gray-500">
             Loading activity monitor...
           </p>
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -132,24 +160,29 @@ const Activity = () => {
         * { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Responsive Padding: smaller padding on mobile (p-4), larger on bigger screens (sm:p-6 lg:p-8) */}
-      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 bg-gray-100 min-h-full w-full">
-        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      {/* Responsive Padding: perfectly synced with dashboard layout */}
+      <div className="w-full h-full flex-1 flex flex-col px-4 sm:px-8 lg:px-[50px] overflow-y-auto overflow-x-hidden scroll-smooth">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full py-8 space-y-4 sm:space-y-6"
+        >
           
           {/* 🎨 UI MATCH: Header styling - Stacks vertically on mobile */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-2 sm:mb-4">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-2 sm:mb-4">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Activity Monitor</h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">Track your recent actions and resource usage.</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Adaptive grid spacing */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start">
             
             {/* Timeline Section */}
             {/* 🎨 UI MATCH: Changed to white card with shadow-md and adaptive padding */}
-            <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 w-full relative overflow-hidden">
+            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-md p-4 sm:p-6 w-full relative overflow-hidden border border-gray-100">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-4 sm:mb-6">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                   <ActivityIcon className="text-blue-600 shrink-0" size={20} /> 
@@ -178,16 +211,22 @@ const Activity = () => {
                 <>
                   <div className="mt-4 flex flex-col pl-2">
                     {displayedTimeline.map((item, idx) => (
-                      <div key={idx} className="flex gap-4">
+                      <motion.div 
+                        key={idx} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="flex gap-4 group"
+                      >
                         {/* Timeline Line & Dot Column */}
                         <div className="flex flex-col items-center">
                           {/* 🔥 FIX: Changed w-4 h-4 to w-3 h-3 for a smaller dot, adjusted margin to align visually */}
-                          <div className={`w-3 h-3 rounded-full shadow-sm mt-1.5 shrink-0 ${
+                          <div className={`w-3 h-3 rounded-full shadow-sm mt-1.5 shrink-0 transition-transform group-hover:scale-125 ${
                             item.status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
                           }`}></div>
                           {/* Only show the connecting line if it's NOT the last item */}
                           {idx !== displayedTimeline.length - 1 && (
-                            <div className="w-[2px] h-full bg-gray-200 mt-1.5"></div>
+                            <div className="w-[2px] h-full bg-gray-200 mt-1.5 group-hover:bg-blue-200 transition-colors"></div>
                           )}
                         </div>
                         
@@ -196,10 +235,10 @@ const Activity = () => {
                           <span className="text-xs font-mono text-gray-500 block mb-0.5">
                             {formatTime(item.timestamp)}
                           </span>
-                          <h4 className="text-gray-800 font-bold text-sm">{item.action}</h4>
+                          <h4 className="text-gray-800 font-bold text-sm group-hover:text-blue-600 transition-colors">{item.action}</h4>
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">{item.details}</p>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                   
@@ -219,11 +258,11 @@ const Activity = () => {
                   <p className="text-sm font-medium">No activity detected for this date.</p>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Access Logs Section */}
             {/* 🎨 UI MATCH: Changed to white card with shadow-md and adaptive padding */}
-            <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 w-full relative overflow-hidden">
+            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-md p-4 sm:p-6 w-full relative overflow-hidden border border-gray-100">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
                 <Server className="text-purple-600 shrink-0" size={20} /> Resource Access
               </h3>
@@ -235,13 +274,17 @@ const Activity = () => {
                       const IconComponent = getIconForResource(log.type);
                       
                       return (
-                        <div key={idx} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group">
+                        <motion.div 
+                          key={idx} 
+                          whileHover={{ scale: 1.01, x: 4 }}
+                          className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group cursor-default"
+                        >
                           <div className="flex items-center gap-3 sm:gap-4 truncate mr-2">
-                            <div className="p-2 sm:p-2.5 bg-white shadow-sm border border-gray-100 rounded-xl text-gray-500 group-hover:text-blue-600 group-hover:scale-110 transition-all shrink-0">
+                            <div className="p-2 sm:p-2.5 bg-white shadow-sm border border-gray-100 rounded-xl text-gray-500 group-hover:text-purple-600 group-hover:scale-110 transition-all shrink-0">
                               <IconComponent size={18} className="sm:w-5 sm:h-5" />
                             </div>
                             <div className="truncate">
-                              <p className="font-bold text-gray-800 text-sm sm:text-base truncate">{log.resource}</p>
+                              <p className="font-bold text-gray-800 text-sm sm:text-base truncate group-hover:text-purple-700 transition-colors">{log.resource}</p>
                               <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mt-0.5">{log.type}</p>
                             </div>
                           </div>
@@ -249,7 +292,7 @@ const Activity = () => {
                             <p className="text-sm sm:text-base font-bold text-gray-800">{log.count}</p>
                             <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{formatTimeAgo(log.last)}</p>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
@@ -258,7 +301,7 @@ const Activity = () => {
                     <button 
                       // 🔥 UPDATED: Opens the Modal instead of stretching the card
                       onClick={() => setIsLogsModalOpen(true)}
-                      className="w-full mt-6 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-purple-600 transition-all text-sm font-medium flex items-center justify-center gap-2"
+                      className="w-full mt-6 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 hover:text-purple-600 transition-all text-sm font-medium flex items-center justify-center gap-2 cursor-pointer"
                     >
                       View Full Logs ({accessLogs.length}) <ArrowUpRight size={16} />
                     </button>
@@ -270,122 +313,142 @@ const Activity = () => {
                    <p className="text-sm font-medium">No resource access logs available.</p>
                  </div>
               )}
-            </div>
+            </motion.div>
 
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* 🔥 ADDED: Timeline Modal View */}
-      {isTimelineModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          // Close when clicking outside the modal
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsTimelineModalOpen(false);
-          }}
-        >
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl p-6 relative scale-95 animate-in fade-in zoom-in duration-200">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <ActivityIcon className="text-blue-600" size={20} />
-                Full Activity Timeline
-              </h2>
-              <button 
-                onClick={() => setIsTimelineModalOpen(false)}
-                className="text-gray-500 hover:text-red-500 text-xl font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      <AnimatePresence>
+        {isTimelineModalOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            // Close when clicking outside the modal
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsTimelineModalOpen(false);
+            }}
+          >
+            <motion.div 
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="bg-white w-full max-w-3xl rounded-xl shadow-xl p-6 relative"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <ActivityIcon className="text-blue-600" size={20} />
+                  Full Activity Timeline
+                </h2>
+                <button 
+                  onClick={() => setIsTimelineModalOpen(false)}
+                  className="text-gray-500 hover:text-red-500 text-xl font-bold cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
 
-            {/* Scrollable Content */}
-            <div className="max-h-[60vh] overflow-y-auto pr-4 flex flex-col pl-2">
-              {filteredTimeline.map((item, idx) => (
-                <div key={idx} className="flex gap-4">
-                  {/* Timeline Line & Dot Column */}
-                  <div className="flex flex-col items-center">
-                    {/* 🔥 FIX: Changed w-4 h-4 to w-3 h-3 for a smaller dot, adjusted margin to align visually */}
-                    <div className={`w-3 h-3 rounded-full shadow-sm mt-1.5 shrink-0 ${
-                      item.status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-                    }`}></div>
-                    {/* Only show the connecting line if it's NOT the last item */}
-                    {idx !== filteredTimeline.length - 1 && (
-                      <div className="w-[2px] h-full bg-gray-200 mt-1.5"></div>
-                    )}
+              {/* Scrollable Content */}
+              <div className="max-h-[60vh] overflow-y-auto pr-4 flex flex-col pl-2">
+                {filteredTimeline.map((item, idx) => (
+                  <div key={idx} className="flex gap-4 group">
+                    {/* Timeline Line & Dot Column */}
+                    <div className="flex flex-col items-center">
+                      {/* 🔥 FIX: Changed w-4 h-4 to w-3 h-3 for a smaller dot, adjusted margin to align visually */}
+                      <div className={`w-3 h-3 rounded-full shadow-sm mt-1.5 shrink-0 transition-transform group-hover:scale-125 ${
+                        item.status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                      }`}></div>
+                      {/* Only show the connecting line if it's NOT the last item */}
+                      {idx !== filteredTimeline.length - 1 && (
+                        <div className="w-[2px] h-full bg-gray-200 mt-1.5 group-hover:bg-blue-200 transition-colors"></div>
+                      )}
+                    </div>
+                    
+                    {/* Content Column */}
+                    <div className="pb-8">
+                      <span className="text-xs font-mono text-gray-500 block mb-1">
+                        {formatTime(item.timestamp)}
+                      </span>
+                      <h4 className="font-bold text-gray-800 text-sm sm:text-base group-hover:text-blue-600 transition-colors">
+                        {item.action}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                        {item.details}
+                      </p>
+                    </div>
                   </div>
-                  
-                  {/* Content Column */}
-                  <div className="pb-8">
-                    <span className="text-xs font-mono text-gray-500 block mb-1">
-                      {formatTime(item.timestamp)}
-                    </span>
-                    <h4 className="font-bold text-gray-800 text-sm sm:text-base">
-                      {item.action}
-                    </h4>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                      {item.details}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* 🔥 ADDED: Access Logs Modal View */}
-      {isLogsModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          // Close when clicking outside the modal
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsLogsModalOpen(false);
-          }}
-        >
-          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl p-6 relative scale-95 animate-in fade-in zoom-in duration-200">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Server className="text-purple-600" size={20} />
-                Full Resource Access Logs
-              </h2>
-              <button 
-                onClick={() => setIsLogsModalOpen(false)}
-                className="text-gray-500 hover:text-red-500 text-xl font-bold"
-              >
-                ✕
-              </button>
-            </div>
+      <AnimatePresence>
+        {isLogsModalOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            // Close when clicking outside the modal
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsLogsModalOpen(false);
+            }}
+          >
+            <motion.div 
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="bg-white w-full max-w-3xl rounded-xl shadow-xl p-6 relative"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Server className="text-purple-600" size={20} />
+                  Full Resource Access Logs
+                </h2>
+                <button 
+                  onClick={() => setIsLogsModalOpen(false)}
+                  className="text-gray-500 hover:text-red-500 text-xl font-bold cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
 
-            {/* Scrollable Content */}
-            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
-              {accessLogs.map((log, idx) => {
-                const IconComponent = getIconForResource(log.type);
-                
-                return (
-                  <div key={idx} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-300 transition-all">
-                    <div className="flex items-center gap-3 sm:gap-4 truncate mr-2">
-                      <div className="p-2 sm:p-2.5 bg-white shadow-sm border border-gray-100 rounded-xl text-gray-500 shrink-0">
-                        <IconComponent size={18} className="sm:w-5 sm:h-5" />
+              {/* Scrollable Content */}
+              <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
+                {accessLogs.map((log, idx) => {
+                  const IconComponent = getIconForResource(log.type);
+                  
+                  return (
+                    <motion.div 
+                      key={idx} 
+                      whileHover={{ scale: 1.01, x: 2 }}
+                      className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-300 transition-all group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4 truncate mr-2">
+                        <div className="p-2 sm:p-2.5 bg-white shadow-sm border border-gray-100 rounded-xl text-gray-500 group-hover:text-purple-600 group-hover:scale-110 transition-all shrink-0">
+                          <IconComponent size={18} className="sm:w-5 sm:h-5" />
+                        </div>
+                        <div className="truncate">
+                          <p className="font-bold text-gray-800 text-sm sm:text-base truncate group-hover:text-purple-700 transition-colors">{log.resource}</p>
+                          <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mt-0.5">{log.type}</p>
+                        </div>
                       </div>
-                      <div className="truncate">
-                        <p className="font-bold text-gray-800 text-sm sm:text-base truncate">{log.resource}</p>
-                        <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider mt-0.5">{log.type}</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm sm:text-base font-bold text-gray-800">{log.count}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{formatTimeAgo(log.last)}</p>
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm sm:text-base font-bold text-gray-800">{log.count}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{formatTimeAgo(log.last)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 };

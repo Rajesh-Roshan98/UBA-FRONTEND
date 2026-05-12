@@ -1,23 +1,50 @@
 import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import api from "../services/api";
+import { redirect } from "../services/navigationService"; // 🔥 FIX 3: Import SPA redirect
 
-// 🔥 NEW: Import socket functions (adjust the path if your file is named differently or in a different folder)
-import { socket, connectUserSocket, disconnectUserSocket } from "../services/socket"; 
+// 🔥 IMPROVEMENT: Separated imports for proper scalable architecture
+import BootScreen from "../components/ui/BootScreen";
+import { useServerWake } from "../hooks/useServerWake";
+
+// Import socket functions (adjust the path if your file is named differently or in a different folder)
+import {
+  socket,
+  connectUserSocket,
+  disconnectUserSocket,
+} from "../services/socket";
+import { AnimatePresence } from "framer-motion";
 
 const AuthContext = createContext(null);
 
 // Normalize user object from backend
 const normalizeUser = (user) => ({
   ...user,
-  role: user.role || "user", // 🔥 Ensure role is always defined (defaults to "user")
+  role: user.role || "user",
   isEmailVerified: user.isEmailVerified ?? user.emailVerified ?? false,
 });
+
+// 🔥 IMPROVEMENT: Centralized auth cleanup helper
+const clearAuthData = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("authUser");
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // 🔥 THE FLASH FIX: Lock this state on the very first render.
+  // By initializing it in useState, it guarantees it runs instantly and never fluctuates, 
+  // keeping the BootScreen rock-solid and completely hiding the Error Page.
+  const [recoveringFromError] = useState(() => 
+    typeof window !== "undefined" && window.location.href.includes("/server-error")
+  );
+
+  // 🔥 CLEANUP: We destructure the wake logic from our custom hook
+  const { isWakingUp, setIsWakingUp, ensureBackendAwake } = useServerWake();
 
   // Helper used for login/refresh where the app is already mounted
   const getUserFromServer = async () => {
@@ -26,14 +53,14 @@ export const AuthProvider = ({ children }) => {
 
       if (res.data.success && res.data.user) {
         const normalized = normalizeUser(res.data.user);
-        // 🔥 Keep localStorage in sync with the fetched role
         localStorage.setItem("role", normalized.role);
         return normalized;
       }
     } catch (err) {
       console.error("getUserFromServer error:", err);
-      if (!err.response || (err.response.status && err.response.status >= 500)) {
-        throw err; // Internal throw to pass error down to login/refresh handlers
+      // 🔥 FIX 2: Safe optional chaining to prevent undefined crashes
+      if (!err.response || err.response?.status >= 500) {
+        throw err;
       }
     }
 
@@ -41,97 +68,87 @@ export const AuthProvider = ({ children }) => {
   };
 
   /* ================= SOCKET EXPIRY LISTENER ================= */
-  // 🔥 NEW: Handle token expiry from socket (VERY IMPORTANT)
   useEffect(() => {
     const handleSocketUnauthorized = () => {
       console.warn("⚠️ Socket unauthorized → logging out user");
-      
-      // Wipe storage directly instead of calling the API to prevent a 401 loop
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      localStorage.removeItem("authUser");
+
+      clearAuthData(); // 🔥 Refactored to use helper
       setUser(null);
-      
-      // Disconnect socket and redirect
+
       disconnectUserSocket();
-      window.location.href = "/login"; 
+      redirect("/login"); // 🔥 FIX 3: Use clean SPA redirect instead of window.location
     };
 
     window.addEventListener("socket_unauthorized", handleSocketUnauthorized);
 
     return () => {
-      window.removeEventListener("socket_unauthorized", handleSocketUnauthorized);
+      window.removeEventListener(
+        "socket_unauthorized",
+        handleSocketUnauthorized,
+      );
     };
   }, []);
 
   /* ================= LOAD USER ON APP START ================= */
   useEffect(() => {
     let isMounted = true;
-    
-    // 🔥 OPTIMIZATION 7: Single Global AbortController for all fetches and unmounts
     const globalAbortController = new AbortController();
 
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      let isFatalError = false; // 🔥 Track fatal errors for both paths
+    const bootSequence = async () => {
+      let wakeScreenActive = false;
 
-      // =================================================================
-      // 🔥 TEACHER'S FIX: The Global Health Check for Unauthenticated Users
-      // =================================================================
-      if (!token) {
-        try {
-          if (!navigator.onLine) throw new Error("Offline");
+      // 🔥 ISSUE 2 FIX: Helper to sync state cleanly
+      const stopWakeScreen = () => {
+        setIsWakingUp(false);
+        wakeScreenActive = false;
+      };
 
-          // 🔥 FIX 1: Replaced native fetch with Axios to ensure interceptor routing
-          await api.get("/api/v1/auth/health", { 
-            signal: globalAbortController.signal
-          });
+      try {
+        // 🔥 THE STUCK URL FIX: Native Browser History replacement
+        // React Router is unmounted during the BootScreen, so custom redirect() fails.
+        // This instantly rewrites the URL natively, so when the Router eventually mounts, it sees "/" instead of "/server-error".
+        if (typeof window !== "undefined" && window.location.href.includes("/server-error")) {
+          window.history.replaceState(null, "", "/");
+        }
 
+        // 🔥 ISSUE 4 FIX: Handled offline natively to prevent unnecessary boot errors
+        if (!navigator.onLine) {
+          setLoading(false);
+          setIsInitialized(true);
+          return;
+        }
+
+        // PHASE 1: THE SILENT POLLING LOOP
+        const serverAwake = await ensureBackendAwake(
+          globalAbortController.signal,
+          () => {
+            wakeScreenActive = true;
+            setLoading(false);
+          },
+        );
+
+        if (!serverAwake) {
+          stopWakeScreen(); // 🔥 UNBLOCKS APP.JSX TO PROCESS THE REDIRECT
+          redirect("/server-error?code=SERVER_UNREACHABLE"); // 🔥 FIX 3: SPA redirect
+          return;
+        }
+
+        // PHASE 2: SERVER IS AWAKE -> FETCH USER
+        if (isMounted) {
+          stopWakeScreen();
+        }
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
           if (isMounted) {
             setUser(null);
           }
-        } catch (err) {
-          // 🔥 SAFEGUARD: If the component unmounted, do not trigger a fake 504 redirect!
-          if (!isMounted) return; 
-
-          console.warn("Public Health Check failed: Server is likely offline or unreachable.");
-
-          // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
-          if (!err.response) {
-            console.warn("Network issue detected");
-            isFatalError = true; // Locks UI from flashing while Axios redirects
-            throw err; 
-          }
-
-          if (err.response?.status === 401) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
-            setUser(null);
-          } else {
-            console.warn("Server issue detected");
-            isFatalError = true;
-            throw err; 
-          }
-          
-        } finally {
-          if (isMounted && !isFatalError) {
-            setLoading(false);
-            setIsInitialized(true);
-          }
+          return;
         }
-        return; // Exit here since they have no token
-      }
-      // =================================================================
-      // END HEALTH CHECK
-      // =================================================================
 
-      try {
-        // Throw an error immediately if offline so we skip straight to the catch block
-        if (!navigator.onLine) throw new Error("Offline");
-
-        // 🔥 FIX 1: Replaced native fetch with Axios. Headers & Base URL are now auto-handled.
         const res = await api.get("/api/v1/auth/getUserDetail", {
-          signal: globalAbortController.signal 
+          signal: globalAbortController.signal,
         });
 
         const data = res.data;
@@ -142,55 +159,45 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem("role", normalizedUser.role);
             setUser(normalizedUser);
 
-            // 🔥 NEW: reconnect socket after reload
             if (!socket.connected) {
-              connectUserSocket(token, normalizedUser.userId || normalizedUser.adminId || normalizedUser._id);
+              connectUserSocket(
+                token,
+                normalizedUser.userId ||
+                  normalizedUser.adminId ||
+                  normalizedUser._id,
+              );
             }
           } else {
             setUser(null);
-            localStorage.removeItem("token");
-            localStorage.removeItem("role"); // Clean up role on failure
+            clearAuthData(); // 🔥 Refactored to use helper
           }
         }
       } catch (err) {
-        // 🔥 SAFEGUARD: If the component unmounted, do not trigger a fake 504 redirect!
-        if (!isMounted) return; 
+        if (!isMounted || globalAbortController.signal.aborted) return;
+        console.error("[Boot Sequence] Initialization failed:", err);
 
-        console.warn("Auth fetchUser failed: Server is likely offline or unreachable.");
-
-        // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
-        if (!err.response) {
-          console.warn("Network issue detected");
-          isFatalError = true;
-          throw err; 
-        }
-
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
-          setUser(null);
-        } else {
-          console.warn("Server issue detected");
-          isFatalError = true;
-          throw err; 
-        }
-
+        disconnectUserSocket(); // 🔥 Disconnect ghost socket on auth failure
+        setUser(null);
+        clearAuthData(); // 🔥 Refactored to use helper
       } finally {
-        if (isMounted && !isFatalError) {
+        if (
+          isMounted &&
+          !globalAbortController.signal.aborted &&
+          !wakeScreenActive
+        ) {
           setLoading(false);
           setIsInitialized(true);
         }
       }
     };
 
-    fetchUser();
+    bootSequence();
 
     return () => {
       isMounted = false;
-      // 🔥 Cleanly kill any pending network requests when leaving the app!
-      globalAbortController.abort(); 
+      globalAbortController.abort();
     };
-  }, []);
+  }, []); // 🔥 FIX 1: Empty dependency array avoids unnecessary custom hook reruns
 
   /* ================= LOGIN ================= */
   const login = async (token) => {
@@ -198,48 +205,78 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", token);
     setLoading(true);
 
-    let isFatalError = false; 
+    let isFatalError = false;
+    let wakeScreenActive = false;
+
+    // 🔥 ISSUE 2 FIX: Helper to sync state cleanly
+    const stopWakeScreen = () => {
+      setIsWakingUp(false);
+      wakeScreenActive = false;
+    };
 
     try {
+      const serverAwake = await ensureBackendAwake(undefined, () => {
+        wakeScreenActive = true;
+        setLoading(false);
+      });
+
+      if (!serverAwake) {
+        stopWakeScreen(); // 🔥 UNBLOCKS APP.JSX TO PROCESS THE REDIRECT
+        redirect("/server-error?code=SERVER_UNREACHABLE"); // 🔥 FIX 3: SPA redirect
+        return;
+      }
+
+      if (wakeScreenActive) {
+        stopWakeScreen();
+      }
+
       const fetchedUser = await getUserFromServer();
 
       if (fetchedUser) {
         setUser(fetchedUser);
-        localStorage.setItem("role", fetchedUser.role); 
+        stopWakeScreen();
 
-        // 🔥 NEW: CONNECT SOCKET HERE
         if (!socket.connected) {
-          connectUserSocket(token, fetchedUser.userId || fetchedUser.adminId || fetchedUser._id);
+          connectUserSocket(
+            token,
+            fetchedUser.userId || fetchedUser.adminId || fetchedUser._id,
+          );
         }
       } else {
         setUser(null);
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+        clearAuthData(); // 🔥 Refactored to use helper
       }
     } catch (err) {
       console.error("Auth login error:", err);
 
-      // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
-      if (!err.response) {
-        isFatalError = true;
-        throw err; 
+      if (
+        !err.response ||
+        err.code === "ECONNABORTED" ||
+        err.code === "ERR_NETWORK"
+      ) {
+        console.warn("Server is sleeping during login");
+        setIsWakingUp(true);
+        wakeScreenActive = true;
+        setLoading(false);
+        return;
       }
 
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+        disconnectUserSocket(); // 🔥 Disconnect ghost socket on auth failure
+        clearAuthData(); // 🔥 Refactored to use helper
         setUser(null);
       } else {
         console.warn("Temporary login error.");
-        if (err.response.status && err.response.status >= 500) {
-          isFatalError = true; 
-          throw err; 
+        // 🔥 FIX 2: Safe optional chaining to prevent undefined crashes
+        if (err.response?.status >= 500) {
+          isFatalError = true;
+          throw err;
         }
       }
     } finally {
-      if (!isFatalError) {
+      if (!isFatalError && !wakeScreenActive) {
         setLoading(false);
-        setIsInitialized(true); // 🔥 Added to ensure state un-sticks after login
+        setIsInitialized(true);
       }
     }
   };
@@ -248,15 +285,15 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoggingOut(true);
-      await api.post("/api/v1/auth/logout");
+      // 🔥 FIX 6: Silent logout ignores global errors to prevent server-error redirect loop
+      await api.post("/api/v1/auth/logout", null, {
+        skipGlobalErrorHandler: true,
+      });
     } catch (err) {
       console.error("Logout API error:", err);
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      localStorage.removeItem("authUser");
+      clearAuthData(); // 🔥 Refactored to use helper
 
-      // 🔥 NEW: DISCONNECT SOCKET
       disconnectUserSocket();
 
       setUser(null);
@@ -265,24 +302,51 @@ export const AuthProvider = ({ children }) => {
   };
 
   /* ================= REFRESH USER ================= */
-  const refreshUser = async () => {
+  // 🔥 THE FIX: Added skipWakeScreen parameter
+  const refreshUser = async (skipWakeScreen = false) => {
     const token = localStorage.getItem("token");
     if (!token) return null;
 
+    let wakeScreenActive = false;
+
+    // 🔥 ISSUE 2 FIX: Helper to sync state cleanly
+    const stopWakeScreen = () => {
+      setIsWakingUp(false);
+      wakeScreenActive = false;
+    };
+
     try {
+      // 🔥 THE FIX: Only run the 2-minute polling animation block if NOT doing a silent background retry
+      if (!skipWakeScreen) {
+        const serverAwake = await ensureBackendAwake(undefined, () => {
+          wakeScreenActive = true;
+        });
+
+        if (!serverAwake) {
+          stopWakeScreen(); // 🔥 UNBLOCKS APP.JSX TO PROCESS THE REDIRECT
+          redirect("/server-error?code=SERVER_UNREACHABLE"); // 🔥 FIX 3: SPA redirect
+          return null;
+        }
+
+        if (wakeScreenActive) {
+          stopWakeScreen();
+        }
+      }
+
       const updatedUser = await getUserFromServer();
 
       if (updatedUser) {
         setUser(updatedUser);
-        localStorage.setItem("role", updatedUser.role);
-        
-        // 🔥 THE FIX: Un-stick the UI state so the Navbar knows it's safe to render!
+        if (!skipWakeScreen) stopWakeScreen();
+
         setIsInitialized(true);
         setLoading(false);
-        
-        // 🔥 NEW: Ensure socket is reconnected on refresh
+
         if (!socket.connected) {
-          connectUserSocket(token, updatedUser.userId || updatedUser.adminId || updatedUser._id);
+          connectUserSocket(
+            token,
+            updatedUser.userId || updatedUser.adminId || updatedUser._id,
+          );
         }
 
         return updatedUser;
@@ -290,15 +354,29 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Auth refreshUser error:", err);
 
-      // 🔥 FIX 2: Check standard !err.response and throw to allow boundaries/interceptors to catch it
-      if (!err.response) {
-        throw err; 
+      if (
+        !err.response ||
+        err.code === "ECONNABORTED" ||
+        err.code === "ERR_NETWORK"
+      ) {
+        console.warn("Server sleeping during refresh");
+        // 🔥 THE FIX: Do not hijack the screen if we are quietly checking from the Error Page
+        if (!skipWakeScreen) {
+          setIsWakingUp(true);
+          wakeScreenActive = true;
+        }
+        return null;
       }
 
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+        disconnectUserSocket(); // 🔥 Disconnect ghost socket on auth failure
+        clearAuthData(); // 🔥 Refactored to use helper
         setUser(null);
+      }
+    } finally {
+      // 🔥 Safely restore loading state if the sequence completes without wake screen
+      if (!wakeScreenActive) {
+        setLoading(false);
       }
     }
 
@@ -310,8 +388,7 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       user,
-      // 🔥 ADDED: Safely expose the generated alphanumeric ID for anywhere in your frontend
-      userId: user?.userId || user?.adminId || null, 
+      userId: user?.userId || user?.adminId || null,
       isAuthenticated: !!user,
       role: user?.role || "user",
       isAdmin: user?.role === "admin",
@@ -323,11 +400,24 @@ export const AuthProvider = ({ children }) => {
       refreshUser,
       setUser,
       isLoggingOut,
+      isWakingUp,
     }),
-    [user, loading, isLoggingOut, isInitialized],
+    [user, loading, isLoggingOut, isInitialized, isWakingUp],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // 🔥 THE ULTIMATE FLASH FIX:
+  // Uses the locked recoveringFromError state to physically prevent the Error Page 
+  // from flashing before the backend check completes.
+  const showBootScreen = isWakingUp || (!isInitialized && recoveringFromError);
+
+  return (
+    <AuthContext.Provider value={value}>
+      <AnimatePresence mode="wait">
+        {showBootScreen && <BootScreen key="wake-screen" />}
+        {!showBootScreen && children}
+      </AnimatePresence>
+    </AuthContext.Provider>
+  );
 };
 
 /* ================= CUSTOM HOOK ================= */

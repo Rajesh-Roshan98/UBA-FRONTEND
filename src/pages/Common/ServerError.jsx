@@ -17,6 +17,9 @@ const ServerError = ({ code: propCode }) => {
   const location = useLocation(); 
   const [searchParams] = useSearchParams(); 
   const headingRef = useRef(null);
+  
+  // 🔥 FIX 3: Cleaner React architecture for timeouts
+  const recoveryTimeoutRef = useRef(null); 
 
   // 🔥 ADDED: Extract refreshUser to sync global state on recovery
   const { refreshUser } = useAuth(); 
@@ -89,13 +92,24 @@ const ServerError = ({ code: propCode }) => {
   const retryRefresh = async (retries = 3, delay = 2000) => {
     for (let i = 0; i < retries; i++) {
       try {
-        const user = await refreshUser();
+        // 🔥 THE FIX: Added 'true' to skip the Wake Animation and retry silently
+        const user = await refreshUser(true);
         if (user) return true;
       } catch (e) {}
 
       await new Promise(res => setTimeout(res, delay));
     }
     return false;
+  };
+
+  // 🔥 FIX 2: Hard timeout wrapper to prevent infinite "Checking..." state
+  const withTimeout = (promise, ms = 30000) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Retry timeout")), ms)
+      ),
+    ]);
   };
 
   useEffect(() => {
@@ -180,8 +194,6 @@ const ServerError = ({ code: propCode }) => {
 
   // 🔥 THE AUTO-RECONNECT FIX: Sync the AuthContext before redirecting automatically
   useEffect(() => {
-    let recoveryTimeout; // Hold the timeout ID for cleanup
-
     const handleOnline = () => {
       setIsOnline(true);
       setErrorMessage(""); // Clear old errors
@@ -198,7 +210,8 @@ const ServerError = ({ code: propCode }) => {
         setIsRetrying(true); // Trigger the loading UI while we sync and wait
         
         // 🔥 INDUSTRY STANDARD FIX: Add a debounce so the backend DB has time to recover
-        recoveryTimeout = setTimeout(async () => {
+        // 🔥 FIX 3: Using recoveryTimeoutRef instead of local variable
+        recoveryTimeoutRef.current = setTimeout(async () => {
           if (!navigator.onLine) {
             setIsRetrying(false); // 🔧 Fix 5: Reset UI instantly if connection drops again during wait
             return;
@@ -232,7 +245,8 @@ const ServerError = ({ code: propCode }) => {
           // SCENARIO 2: AUTO-RETRY FOR AUTHENTICATED USER
           try {
             // 🔥 ADDED SILENT RETRY LOGIC HERE
-            const success = await retryRefresh();
+            // 🔥 FIX 2: Wrapped with hard timeout to prevent infinite hang
+            const success = await withTimeout(retryRefresh(), 30000);
             
             if (success) {
               let lastPath = sessionStorage.getItem('lastValidPath') || '/';
@@ -257,7 +271,7 @@ const ServerError = ({ code: propCode }) => {
     const handleOffline = () => {
       setIsOnline(false);
       // Clear the timeout if they lose connection again while waiting
-      if (recoveryTimeout) clearTimeout(recoveryTimeout);
+      if (recoveryTimeoutRef.current) clearTimeout(recoveryTimeoutRef.current);
     };
 
     window.addEventListener('online', handleOnline);
@@ -266,7 +280,7 @@ const ServerError = ({ code: propCode }) => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      if (recoveryTimeout) clearTimeout(recoveryTimeout); // Prevent memory leaks on unmount
+      if (recoveryTimeoutRef.current) clearTimeout(recoveryTimeoutRef.current); // Prevent memory leaks on unmount
     };
   }, [code, refreshUser, isNotFound]);
 
@@ -306,7 +320,8 @@ const ServerError = ({ code: propCode }) => {
     // We MUST use refreshUser() so the Navbar gets the updated avatar profile data!
     try {
       // 🔥 ADDED SILENT RETRY LOGIC HERE
-      const success = await retryRefresh();
+      // 🔥 FIX 2: Wrapped with hard timeout to prevent infinite hang
+      const success = await withTimeout(retryRefresh(), 30000);
 
       if (success) {
         // Server is awake AND global state is updated! Safe to redirect.
@@ -335,8 +350,9 @@ const ServerError = ({ code: propCode }) => {
 
   // 🔥 IMPROVED: Better icon classification mapping using the new variables
   const getErrorIcon = () => {
-    // 🔥 FIX: Added !isOnline here to ensure the icon snaps to WifiOff instantly if connection drops, matching the text perfectly.
-    if (!isOnline || isNetworkError || isServerUnreachable) return WifiOff;
+    // 🔥 FIX: Separated user-side offline states from server-side unreachable states for accurate icons
+    if (!isOnline || isNetworkError) return WifiOff;
+    if (isServerUnreachable) return ServerCrash; // Correctly maps to the server icon
     if (isTimeout) return Clock;
     if (isMaintenance) return Wrench;
     if (isNotFound) return AlertCircle;

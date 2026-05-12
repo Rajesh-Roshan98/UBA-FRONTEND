@@ -112,6 +112,8 @@ const VerifyEmail = () => {
   };
 
   const handleVerify = async () => {
+    if (verifying) return; // 🔥 PREVENTS DOUBLE-EXECUTION FROM FAST CLICKS/AUTO-SUBMIT
+
     const finalOtp = otp.join("");
     if (finalOtp.length !== 6) {
       toast.error("Enter complete OTP");
@@ -201,6 +203,7 @@ const VerifyEmail = () => {
             {otp.map((digit, index) => (
               <input
                 key={index}
+                autoComplete="one-time-code" // 🔥 ADDED: WebOTP API Support for mobile auto-fill
                 ref={(el) => (inputsRef.current[index] = el)}
                 value={digit}
                 onFocus={(e) => e.target.select()} // 🔥 NEW: Auto-selects text when tapped
@@ -214,10 +217,16 @@ const VerifyEmail = () => {
                   if (val && index < 5)
                     inputsRef.current[index + 1]?.focus();
                 }}
-                // 🔥 NEW UX UPGRADE: Backspace navigation
+                // 🔥 NEW UX UPGRADE: Backspace & Arrow navigation
                 onKeyDown={(e) => {
                   if (e.key === "Backspace" && !otp[index] && index > 0) {
                     inputsRef.current[index - 1]?.focus();
+                  }
+                  if (e.key === "ArrowLeft" && index > 0) {
+                    inputsRef.current[index - 1]?.focus();
+                  }
+                  if (e.key === "ArrowRight" && index < 5) {
+                    inputsRef.current[index + 1]?.focus();
                   }
                 }}
                 // 🔥 NEW UX UPGRADE: Paste full OTP support

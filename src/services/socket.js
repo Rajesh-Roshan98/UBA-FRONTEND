@@ -6,10 +6,17 @@ const API_BASE = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "") || "http:/
 export const socket = io(API_BASE, { 
   autoConnect: false,
   withCredentials: true,
-  transports: ["websocket"] 
+  transports: ["websocket", "polling"], 
+  timeout: 120000,                      // Give it 120 seconds to connect (matches Axios)
+  reconnection: true,                   // Ensure auto-reconnect is forced ON
+  reconnectionAttempts: Infinity,       // Never stop trying to reconnect
+  reconnectionDelay: 1000,              // Wait 1 second before first retry
+  reconnectionDelayMax: 5000,
+  connectionStateRecovery: {},          // 🔥 FIX 5: Enable Socket.IO v4 state recovery
 });
 
 // 🔥 NEW: Call this from AuthContext.jsx when the user logs in
+// Note: userId is still passed here so we don't break the AuthContext function call, but it is no longer logged.
 export const connectUserSocket = (token, userId) => {
   if (!token || !userId) return;
 
@@ -22,8 +29,10 @@ export const connectUserSocket = (token, userId) => {
   // 2. Set up listeners BEFORE connecting to ensure we never miss the initial event
   socket.off("connect"); // Prevent duplicate listeners if called multiple times
   socket.on("connect", () => {
-    // 🔥 FIX 3: Utilizing userId for explicit debugging context
-    console.log(`✅ Real-time Socket Connected: ${socket.id} (User: ${userId})`);
+    // 🔥 FIX: Only show this log in development mode. It will be completely hidden in production!
+    if (import.meta.env.MODE !== "production") {
+      console.log(`✅ Real-time Socket Connected: ${socket.id}`);
+    }
   });
 
   // 🔥 FIX 1 & 4: Handle connection errors safely and match exact backend error messages
@@ -44,14 +53,18 @@ export const connectUserSocket = (token, userId) => {
     }
   });
 
-  // Handle auto-reconnects gracefully (socket.io is the Manager instance)
-  // Check to ensure we don't stack duplicate reconnect listeners
-  if (!socket.io.listeners("reconnect").length) {
-    socket.io.on("reconnect", () => {
-      console.log("🔄 Reconnected");
-      // Note: Socket.io automatically re-sends the `socket.auth` payload upon reconnection!
-    });
-  }
+  // 🔥 FIX 3: Better Reconnect Listener Management (Manager instance)
+  socket.io.off("reconnect");
+  socket.io.on("reconnect", () => {
+    console.log("🔄 Reconnected");
+    // Note: Socket.io automatically re-sends the `socket.auth` payload upon reconnection!
+  });
+
+  // 🔥 FIX 4: Add Reconnect Attempt Log (Manager instance)
+  socket.io.off("reconnect_attempt");
+  socket.io.on("reconnect_attempt", (attempt) => {
+    console.log(`🔄 Reconnect Attempt: ${attempt}`);
+  });
 
   // 🔥 FIX 5: Global listener dispatches a DOM event so React Context/Components can easily listen
   socket.off("new_notification");
@@ -61,9 +74,10 @@ export const connectUserSocket = (token, userId) => {
     window.dispatchEvent(new CustomEvent("global_new_notification", { detail: data }));
   });
 
+  // 🔥 FIX 2: Disconnect should show reason
   socket.off("disconnect");
-  socket.on("disconnect", () => {
-    console.log("🛑 Real-time Socket Disconnected");
+  socket.on("disconnect", (reason) => {
+    console.log("🛑 Real-time Socket Disconnected:", reason);
   });
 
   // Safer connection logic executed AFTER all listeners are ready
@@ -75,8 +89,12 @@ export const connectUserSocket = (token, userId) => {
 // 🔥 NEW: Call this from AuthContext.jsx when the user logs out
 export const disconnectUserSocket = () => {
   if (socket.connected) {
-    // 🔥 IMPORTANT: Clean up memory and prevent duplicate events on re-login
-    socket.removeAllListeners(); 
+    // 🔥 FIX 1: Explicitly remove custom listeners instead of using the dangerous removeAllListeners()
+    socket.off("connect");
+    socket.off("connect_error");
+    socket.off("disconnect");
+    socket.off("new_notification");
+    
     socket.disconnect();
   }
 };

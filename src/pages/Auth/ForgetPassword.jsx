@@ -152,6 +152,15 @@ const ForgotPassword = () => {
     }
   };
 
+  // 🔥 UX UPGRADE: Auto-submit on full OTP
+  useEffect(() => {
+    if (otp.join("").length === 6) {
+      // Pass a fake event to prevent e.preventDefault() from crashing
+      handleVerifyOtp({ preventDefault: () => {} }); 
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
+
   // 3. Update Database
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -311,6 +320,29 @@ const ForgotPassword = () => {
                         setOtp(updated);
                         if (val && index < 5)
                           inputsRef.current[index + 1]?.focus();
+                      }}
+                      // 🔥 NEW UX UPGRADE: Backspace & Arrow navigation
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" && !otp[index] && index > 0) {
+                          inputsRef.current[index - 1]?.focus();
+                        }
+                        if (e.key === "ArrowLeft" && index > 0) {
+                          inputsRef.current[index - 1]?.focus();
+                        }
+                        if (e.key === "ArrowRight" && index < 5) {
+                          inputsRef.current[index + 1]?.focus();
+                        }
+                      }}
+                      // 🔥 NEW UX UPGRADE: Paste full OTP support
+                      onPaste={(e) => {
+                        const pasteData = e.clipboardData.getData("text").slice(0, 6);
+                        if (!/^\d+$/.test(pasteData)) return;
+
+                        const updated = pasteData.split("");
+                        setOtp([...updated, ...Array(6 - updated.length).fill("")]);
+
+                        inputsRef.current[Math.min(updated.length, 5)]?.focus();
+                        e.preventDefault();
                       }}
                       className="w-10 h-12 text-center text-lg font-semibold rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                     />

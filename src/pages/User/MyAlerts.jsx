@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'; // 🔥 ADDED: useNavigate
 import { AlertTriangle, CheckCircle, XCircle, Clock, Loader, Shield } from 'lucide-react';
 import toast from 'react-hot-toast'; // 🔥 ADDED: Imported react-hot-toast
 import api from "../../services/api";
+import { motion } from 'framer-motion';
 
 const MyAlerts = () => {
   const navigate = useNavigate(); // 🔥 ADDED: Initialize navigate hook
@@ -97,6 +98,22 @@ const MyAlerts = () => {
     });
   };
 
+  // Framer Motion Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+  };
+
   // 🎨 UI MATCH: Updated loading spinner to exactly match the Dashboard
   if (loading) {
     return (
@@ -106,12 +123,17 @@ const MyAlerts = () => {
           ::-webkit-scrollbar { display: none; }
           * { -ms-overflow-style: none; scrollbar-width: none; }
         `}</style>
-        <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }}
+          className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl"
+        >
           <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
           <p className="mt-4 text-sm font-medium text-gray-500">
             Loading alerts...
           </p>
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -126,12 +148,17 @@ const MyAlerts = () => {
         * { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Responsive Padding: smaller padding on mobile (p-4), larger on bigger screens (sm:p-6 lg:p-8) */}
-      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 bg-gray-100 min-h-full w-full">
-        <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+      {/* Responsive Padding: perfectly synced with dashboard layout */}
+      <div className="w-full h-full flex-1 flex flex-col px-4 sm:px-8 lg:px-[50px] overflow-y-auto overflow-x-hidden scroll-smooth">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full py-8 space-y-4 sm:space-y-6"
+        >
           
           {/* 🎨 UI MATCH: Header styling - Stacks vertically on mobile */}
-          <div className="flex flex-col sm:flex-row mb-2 sm:mb-4 justify-between items-start sm:items-center gap-4 sm:gap-0">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row mb-2 sm:mb-4 justify-between items-start sm:items-center gap-4 sm:gap-0">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-800">My Alerts</h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">Security notifications and risk indicators</p>
@@ -153,15 +180,18 @@ const MyAlerts = () => {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Alerts List */}
           <div className="space-y-4">
             {filteredAlerts.map((alert) => (
-              <div
+              <motion.div
                 key={alert.id}
+                variants={itemVariants}
+                whileHover={{ scale: 1.01, y: -2 }}
+                transition={{ duration: 0.2 }}
                 // 🎨 UI MATCH: Added subtle shadows and hover transitions to cards
-                className={`rounded-xl border p-4 sm:p-5 shadow-sm transition-all hover:shadow-md ${getSeverityBg(alert.severity)}`}
+                className={`rounded-xl border p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md ${getSeverityBg(alert.severity)}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex space-x-3 sm:space-x-4">
@@ -198,18 +228,18 @@ const MyAlerts = () => {
                   {alert.status === 'active' && (
                     <button 
                       onClick={() => handleResolve(alert.id)}
-                      className="w-full sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg text-white font-medium transition-colors shadow-sm self-start whitespace-nowrap mt-2 sm:mt-0"
+                      className="w-full sm:w-auto text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-lg text-white font-medium transition-colors shadow-sm self-start whitespace-nowrap mt-2 sm:mt-0 cursor-pointer"
                     >
                       Resolve
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {/* 🎨 UI MATCH: Light theme empty state with dashed borders */}
             {filteredAlerts.length === 0 && (
-              <div className="text-center py-12 sm:py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
+              <motion.div variants={itemVariants} className="text-center py-12 sm:py-16 bg-white rounded-xl border border-dashed border-gray-200 mt-4">
                 <CheckCircle className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
                 <h3 className="mt-4 text-base sm:text-lg font-bold text-gray-800">No alerts</h3>
                 <p className="mt-2 text-xs sm:text-sm font-medium text-gray-500">
@@ -217,10 +247,10 @@ const MyAlerts = () => {
                     ? "You're all caught up! No active alerts." 
                     : "No alerts found in this view."}
                 </p>
-              </div>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </>
   );

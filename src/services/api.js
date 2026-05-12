@@ -13,7 +13,7 @@ const shouldRedirect = () => {
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true,
-  timeout: 8000, // Industry-standard 8-second fail-fast timeout
+  timeout: 120000, // Industry-standard 120-second fail-fast timeout because of the render free tier
 });
 
 // Add a request interceptor
@@ -42,7 +42,7 @@ api.interceptors.request.use(
   (error) => {
     // Handle request errors here
     return Promise.reject(error);
-  },
+  }
 );
 
 // Optional: Add a response interceptor to handle 401s globally
@@ -59,16 +59,30 @@ api.interceptors.response.use(
     const isErrorPage = currentPath.startsWith('/server-error');
     const isUnauthorizedPage = currentPath.startsWith('/unauthorized');
 
-    // 🔥 Fix 2: Handle OFFLINE separately (NO redirect to 503)
-    if (error.code === "OFFLINE") {
-      if (shouldRedirect() && !isErrorPage && !isUnauthorizedPage) {
-        redirect(`/server-error?code=NETWORK_ERROR`);
+    // 🔥 THE FIX: Allow updating the URL to NETWORK_ERROR even if already on the ServerError page!
+    if (
+      error.code === "OFFLINE" ||
+      (error.code === "ERR_NETWORK" && !navigator.onLine)
+    ) {
+      if (shouldRedirect()) {
+        // Only save the path if we are coming from a normal page
+        if (!isErrorPage && !isUnauthorizedPage) {
+          sessionStorage.setItem("lastValidPath", currentPath);
+        }
+        // Always update the URL so the UI dynamically changes to the WiFi Off state
+        if (!isUnauthorizedPage) {
+          redirect(`/server-error?code=NETWORK_ERROR`);
+        }
       }
       return Promise.reject(error);
     }
 
-    // ✅ Ignore cancelled requests (VERY IMPORTANT FIX)
-    if (error.code === "ERR_CANCELED" || error.message === "canceled") {
+    // ✅ Ignore cancelled/aborted requests (VERY IMPORTANT FIX)
+    if (
+      error.code === "ERR_CANCELED" ||
+      error.message === "canceled" ||
+      error.message === "Polling aborted"
+    ) {
       return Promise.reject(error);
     }
 
@@ -113,6 +127,14 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const token = localStorage.getItem("token");
     const requestUrl = error.config?.url;
+
+    // 🔥 IMPORTANT: Ignore health polling requests completely
+    const isHealthCheck =
+      requestUrl?.includes("/api/v1/auth/health");
+
+    if (isHealthCheck) {
+      return Promise.reject(error);
+    }
 
     const isAuthRoute =
       requestUrl?.includes("/login") || requestUrl?.includes("/signup");
@@ -192,7 +214,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  },
+  }
 );
 
 export default api;

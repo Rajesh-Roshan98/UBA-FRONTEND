@@ -11,7 +11,6 @@ import AdminRoute from "./routes/AdminRoute";
 import UserRoute from "./routes/UserRoute";
 
 // 🚀 LAZY LOADED COMPONENTS
-// We use .then(module => ({ default: module.ComponentName })) because you are using named exports from your index files.
 
 const Charts = lazy(() => import("./components/ui/Charts"));
 const CheckActivity = lazy(() => import("./components/CheckActivity"));
@@ -125,15 +124,7 @@ function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Pages */}
-            <Route
-              path="/"
-              element={
-                <HomeGuard>
-                  {" "}
-                  <HomePage />{" "}
-                </HomeGuard>
-              }
-            />
+            <Route path="/" element={ <HomeGuard> {" "} <HomePage />{" "} </HomeGuard> } />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/settings" element={<Settings />} />
@@ -147,148 +138,28 @@ function App() {
             <Route path="/check-activity" element={<CheckActivity />} />
 
             {/* Auth Pages */}
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  {" "}
-                  <Login />{" "}
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/signup"
-              element={
-                <PublicRoute>
-                  {" "}
-                  <Signup />{" "}
-                </PublicRoute>
-              }
-            />
+            <Route path="/login" element={ <PublicRoute> {" "} <Login />{" "} </PublicRoute> } />
+            <Route path="/signup" element={ <PublicRoute> {" "} <Signup />{" "} </PublicRoute> } />
 
             {/* Admin ONLY Protected Pages */}
             <Route element={<AdminRoute />}>
-              <Route
-                path="/charts"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <Charts />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <AdminDashboard />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/access-control"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <AccessControl />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/alerts"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <Alerts />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/anomaly-review"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <AnomalyReview />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <Reports />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/system-logs"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <SystemLogs />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/user-management"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <UserManagement />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin-homepage"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    {" "}
-                    <AdminHomepage />{" "}
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/charts" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <Charts />{" "} </ProtectedRoute> } />
+              <Route path="/admin-dashboard" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <AdminDashboard />{" "} </ProtectedRoute> } />
+              <Route path="/access-control" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <AccessControl />{" "} </ProtectedRoute> } />
+              <Route path="/alerts" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <Alerts />{" "} </ProtectedRoute> } />
+              <Route path="/anomaly-review" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <AnomalyReview />{" "} </ProtectedRoute> } />
+              <Route path="/reports" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <Reports />{" "} </ProtectedRoute> } />
+              <Route path="/system-logs" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <SystemLogs />{" "} </ProtectedRoute> } />
+              <Route path="/user-management" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <UserManagement />{" "} </ProtectedRoute> } />
+              <Route path="/admin-homepage" element={ <ProtectedRoute allowedRoles={["admin"]}> {" "} <AdminHomepage />{" "} </ProtectedRoute> } />
             </Route>
 
             {/* User Pages */}
             <Route element={<UserRoute />}>
-              <Route
-                path="/activity"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    {" "}
-                    <Activity />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/my-alerts"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    {" "}
-                    <MyAlerts />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/my-reports"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    {" "}
-                    <MyReports />{" "}
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/user-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["user"]}>
-                    {" "}
-                    <UserDashboard />{" "}
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/activity" element={ <ProtectedRoute allowedRoles={["user"]}> {" "} <Activity />{" "} </ProtectedRoute> } />
+              <Route path="/my-alerts" element={ <ProtectedRoute allowedRoles={["user"]}> {" "} <MyAlerts />{" "} </ProtectedRoute> } />
+              <Route path="/my-reports" element={ <ProtectedRoute allowedRoles={["user"]}> {" "} <MyReports />{" "} </ProtectedRoute> } />
+              <Route path="/user-dashboard" element={ <ProtectedRoute allowedRoles={["user"]}> {" "} <UserDashboard />{" "} </ProtectedRoute> } />
             </Route>
 
             {/* Email Verification */}

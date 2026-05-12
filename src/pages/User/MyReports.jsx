@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'; // 🔥 ADDED: useNavigate
 import { FileText, Download, Calendar, Filter, Loader, Shield } from 'lucide-react';
 import toast from 'react-hot-toast'; // 🔥 ADDED: Imported react-hot-toast
 import api from "../../services/api";
+import { motion } from 'framer-motion';
 
 const MyReports = () => {
   const navigate = useNavigate(); // 🔥 ADDED: Initialize navigate hook
@@ -42,6 +43,22 @@ const MyReports = () => {
     });
   };
 
+  // Framer Motion Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+  };
+
   // 🎨 UI MATCH: Updated loading spinner to exactly match the Dashboard
   if (loading) {
     return (
@@ -51,12 +68,17 @@ const MyReports = () => {
           ::-webkit-scrollbar { display: none; }
           * { -ms-overflow-style: none; scrollbar-width: none; }
         `}</style>
-        <div className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }}
+          className="flex flex-col items-center justify-center h-[80vh] w-full bg-white/50 backdrop-blur-md rounded-xl"
+        >
           <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
           <p className="mt-4 text-sm font-medium text-gray-500">
             Loading reports...
           </p>
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -71,12 +93,17 @@ const MyReports = () => {
         * { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Responsive Padding: smaller padding on mobile (p-4), larger on bigger screens (sm:p-6 lg:p-8) */}
-      <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 bg-gray-100 min-h-full w-full">
-        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      {/* Responsive Padding: perfectly synced with dashboard layout */}
+      <div className="w-full h-full flex-1 flex flex-col px-4 sm:px-8 lg:px-[50px] overflow-y-auto overflow-x-hidden scroll-smooth">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full py-8 space-y-4 sm:space-y-6"
+        >
           
           {/* Header with Filters - Stacks vertically on mobile */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
             <div>
               {/* 🎨 UI MATCH: Dark bold text for headers */}
               <h1 className="text-xl sm:text-2xl font-bold text-gray-800">My Reports</h1>
@@ -93,14 +120,19 @@ const MyReports = () => {
                 <Filter size={16} className="sm:w-[18px] sm:h-[18px]" /> Generate New
               </button>
             </div>
-          </div>
+          </motion.div>
 
           {/* Reports Grid */}
           {reports.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {reports.map((report) => (
-                // 🎨 UI MATCH: Changed to white card with shadow-sm and hover lift effect
-                <div key={report.id} className="group bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5 hover:shadow-md hover:-translate-y-1 hover:border-gray-300 transition-all duration-300">
+                // 🎨 UI MATCH: Changed to white card with shadow-sm and framer-motion hover lift effect
+                <motion.div 
+                  key={report.id} 
+                  variants={itemVariants}
+                  whileHover={{ y: -4 }}
+                  className="group bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5 hover:shadow-md hover:border-gray-300 transition-shadow duration-300"
+                >
                   <div className="flex items-start justify-between mb-4">
                     {/* 🎨 UI MATCH: Blue tinted icon box */}
                     <div className="p-2.5 sm:p-3 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-100 transition-colors">
@@ -132,19 +164,19 @@ const MyReports = () => {
                   >
                     <Download size={16} /> Download
                   </a>
-                </div>
+                </motion.div>
               ))}
             </div>
           ) : (
             // 🎨 UI MATCH: Light theme empty state with dashed borders
-            <div className="text-center py-12 sm:py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
+            <motion.div variants={itemVariants} className="text-center py-12 sm:py-16 bg-gray-50 rounded-xl border border-dashed border-gray-200 mt-4">
               <FileText className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-300 mb-3 sm:mb-4" />
               <h3 className="text-base sm:text-lg font-bold text-gray-800">No reports found</h3>
               <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500">You don't have any generated security reports yet.</p>
-            </div>
+            </motion.div>
           )}
 
-        </div>
+        </motion.div>
       </div>
     </>
   );
