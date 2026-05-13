@@ -135,16 +135,17 @@ const UserDashboard = () => {
   return (
     <div className="w-full h-full flex-1 flex flex-col px-4 sm:px-8 lg:px-[50px] overflow-y-auto overflow-x-hidden scroll-smooth">
       
-      {/* Wrapper forcing vertical center via auto margins, animated with Framer Motion */}
+      {/* 🔥 UX UPGRADE: Converted to a fluid flex layout using clamp() to dynamically fill empty vertical space. 
+          Your exact original horizontal padding (px-4 sm:px-8 lg:px-[50px]) on the parent is perfectly preserved! */}
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="w-full my-auto space-y-6 py-8"
+        className="w-full flex flex-col flex-1 py-[clamp(1.5rem,4vh,3rem)] gap-[clamp(1.5rem,4vh,2.5rem)]"
       >
         
         {/* --- Header --- */}
-        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 shrink-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Dashboard Overview</h1>
             <p className="text-gray-600">System monitoring is active.</p>
@@ -155,21 +156,23 @@ const UserDashboard = () => {
         </motion.div>
 
         {/* --- Main Content Grid --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 🔥 UX UPGRADE: Added flex-[2] to make this section naturally stretch down the screen */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-[clamp(1rem,3vh,1.5rem)] flex-[2]">
           
           {/* Left Column: Quick Access Links */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-[clamp(1rem,3vh,1.5rem)]">
             {quickLinks.map((link, idx) => (
               <motion.div
                 key={idx}
                 variants={itemVariants}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={idx === 0 ? 'md:col-span-2' : ''}
+                className={`${idx === 0 ? 'md:col-span-2' : ''} h-full`}
               >
+                {/* 🔥 UX UPGRADE: Added flex-col & h-full so the inner card stretches */}
                 <Link 
                   to={link.path}
-                  className="group block h-full relative p-6 rounded-xl border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg"
+                  className="group flex flex-col h-full relative p-[clamp(1.25rem,3vh,1.75rem)] rounded-xl border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-lg"
                 >
                   <div className="flex justify-between items-start">
                     <div className={`p-3 rounded-xl ${link.bg} ${link.color} mb-4`}>
@@ -179,15 +182,18 @@ const UserDashboard = () => {
                       <ArrowRight size={20} />
                     </div>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">{link.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{link.desc}</p>
+                  <div className="mt-auto pt-4">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">{link.title}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">{link.desc}</p>
+                  </div>
                 </Link>
               </motion.div>
             ))}
           </div>
 
           {/* Right Column: Risk Score Widget */}
-          <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-md p-6 flex flex-col justify-between relative overflow-hidden border border-gray-200">
+          {/* 🔥 UX UPGRADE: Added h-full and dynamic clamp padding */}
+          <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-md p-[clamp(1.25rem,3vh,1.75rem)] flex flex-col justify-between relative overflow-hidden border border-gray-200 h-full">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Gauge size={18} className={riskColor} />
@@ -196,7 +202,7 @@ const UserDashboard = () => {
               <p className="text-sm text-gray-600">Real-time analysis via UBA Engine</p>
             </div>
 
-            <div className="flex flex-col items-center justify-center py-6">
+            <div className="flex flex-col items-center justify-center py-6 flex-1">
               <div className="relative">
                 <svg className="w-28 h-28 sm:w-32 sm:h-32 transform -rotate-90">
                   <circle cx="50%" cy="50%" r="45%" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
@@ -236,7 +242,8 @@ const UserDashboard = () => {
         </div>
 
         {/* --- Bottom Stats Grid --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 🔥 UX UPGRADE: Added flex-1 to make this row stretch properly */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[clamp(1rem,3vh,1.5rem)] flex-1">
           {stats && stats.map((stat, index) => {
             const uiConfig = getStatUIConfig(stat.label);
             const IconComponent = uiConfig.icon;
@@ -251,7 +258,8 @@ const UserDashboard = () => {
                 key={index} 
                 variants={itemVariants}
                 whileHover={{ y: -5 }}
-                className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-300 group"
+                // 🔥 UX UPGRADE: Added h-full & flex-col justify-center for vertical stretch
+                className="bg-white rounded-xl shadow-md p-[clamp(1.25rem,3vh,1.75rem)] border border-gray-200 hover:shadow-lg transition-shadow duration-300 group h-full flex flex-col justify-center"
               >
                 <div className="flex items-start justify-between">
                   <div className="text-left">

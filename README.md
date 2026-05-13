@@ -197,4 +197,4 @@ Tested against a dataset of **4,000 unique user profiles** with **101 injected a
 
 - **Project Supervisor:** Mr. Mahesh Kumar Dakua (Assistant Professor, Dept. of CSA)  
 
-This project was submitted in partial fulfilment of the requirements for the **Master of Computer Application (MCA)** at **GIET University, Gunupur, Odisha**.
+This project was submitted in partial fulfilment of the requirements for the **Master of Computer Application (MCA)** at **GIET University, Gunupur, Odisha**. 
