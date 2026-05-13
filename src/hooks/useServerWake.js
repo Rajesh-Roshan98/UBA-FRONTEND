@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import healthApi from "../services/healthApi"; 
+import healthApi from "../services/healthapi"; 
 
 export const useServerWake = () => {
   const [isWakingUp, setIsWakingUp] = useState(false);
