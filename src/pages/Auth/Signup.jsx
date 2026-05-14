@@ -8,7 +8,8 @@ import { Link, useNavigate } from "react-router-dom"; // 🔥 FIX 1: Imported us
 
 // 🔥 FIX: Extracted regex outside component to prevent ReferenceErrors and improve performance
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+// 🔥 SYNC FIX: Updated to match the backend's exact enterprise regex (8-64 chars)
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,64}$/;
 
 const Signup = () => {
   const navigate = useNavigate(); // 🔥 FIX 1: Initialized navigate
@@ -67,8 +68,9 @@ const Signup = () => {
     }
 
     if (!PASSWORD_REGEX.test(password)) {
+      // 🔥 SYNC FIX: Updated message to match the backend requirement description
       return toast.error(
-        "Password must include uppercase, lowercase, number, and special character."
+        "Password must be 8-64 characters: include uppercase, lowercase, number, & symbol."
       );
     }
 

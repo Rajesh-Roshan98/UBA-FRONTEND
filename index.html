@@ -5,10 +5,35 @@
     <link rel="icon" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cloud-UBA</title>
+    
+    <style>
+      /* Pre-paint the exact background color of your BootScreen */
+      body {
+        margin: 0;
+        background-color: #f8fafc; /* Tailwind slate-50 */
+        overflow: hidden; 
+      }
+      
+      /* Pre-paint the exact ambient glow from BootScreen.jsx */
+      .ambient-glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 30rem;
+        height: 30rem;
+        background-color: rgba(99, 102, 241, 0.1); /* Tailwind indigo-500/10 */
+        border-radius: 50%;
+        filter: blur(100px);
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- This holds the background stage until React wakes up and replaces it -->
+      <div class="ambient-glow"></div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
- 

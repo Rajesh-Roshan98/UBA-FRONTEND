@@ -50,7 +50,7 @@ const UserDashboard = () => {
   // Navigation Links Data (Static)
   const quickLinks = [
     { 
-      title: 'Activity Monitor', 
+      title: 'My Activity', 
       desc: 'View logs, resource usage, and timeline.', 
       icon: Activity, 
       color: 'text-blue-600', 

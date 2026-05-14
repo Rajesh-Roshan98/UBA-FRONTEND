@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom"; 
 
 // Add Password Regex
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,64}$/;
 
 // 🔥 NEW: Cooldown time constant
 const COOLDOWN_TIME = 120; 
@@ -178,7 +178,7 @@ const ForgotPassword = () => {
 
     // NEW: Password Strength Regex Validation
     if (!PASSWORD_REGEX.test(passwords.new)) {
-      toast.error("Password must include uppercase, lowercase, number, and special character.");
+      toast.error("Password must be 8-64 characters: include uppercase, lowercase, number, & symbol.");
       return;
     }
 

@@ -178,7 +178,14 @@ export const AuthProvider = ({ children }) => {
 
         disconnectUserSocket(); // 🔥 Disconnect ghost socket on auth failure
         setUser(null);
-        clearAuthData(); // 🔥 Refactored to use helper
+        
+        // ====================================================================
+        // 🔥 ROOT CAUSE FIX: Do NOT wipe the token on 503 / Render Sleep errors!
+        // We only delete the token if the backend explicitly says it's invalid (401).
+        // ====================================================================
+        if (err.response && err.response.status === 401) {
+          clearAuthData(); 
+        }
       } finally {
         if (
           isMounted &&

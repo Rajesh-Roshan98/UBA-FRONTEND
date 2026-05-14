@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import api from "../../services/api"; // Adjust path if it's in a different folder
 
 // 🔥 FIX: Extracted regex outside component to prevent ReferenceErrors and improve performance
-const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).{8,64}$/;
 
 const Spinner = () => (
   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -79,7 +79,7 @@ const ResetPassword = () => {
 
     // 🔥 FIX: Accurate error message mapping exactly to what the regex requires
     if (!STRONG_PASSWORD_REGEX.test(formData.newPassword)) {
-      toast.error("Password must include uppercase, lowercase, number, and special character.");
+      toast.error("Password must be 8-64 characters: include uppercase, lowercase, number, & symbol.");
       return;
     }
 
