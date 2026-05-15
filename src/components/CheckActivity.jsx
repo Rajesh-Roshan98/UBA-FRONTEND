@@ -61,8 +61,8 @@ export default function CheckActivity() {
 
   if (loading) {
     return (
-      /* 🔥 UPDATED: Centered mobile-friendly loader while keeping the fixed overlay */
-      <div className="fixed inset-0 z-[100] bg-gray-50 flex items-center justify-center text-gray-900 p-4">
+      /* Only background updated – logic unchanged */
+      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 flex items-center justify-center text-gray-900 p-4">
         <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
           <Loader2 className="animate-spin text-blue-600 shrink-0" size={28} />
           <p className="font-medium text-sm sm:text-base text-gray-700">Fetching activity details...</p>
@@ -72,8 +72,8 @@ export default function CheckActivity() {
   }
 
   return (
-    /* 🔥 UPDATED: Fixed overlay with internal scrolling to handle mobile viewports seamlessly without forcing PC scrollbars */
-    <div className="fixed inset-0 z-[100] bg-gray-50 overflow-y-auto font-sans text-gray-900">
+    /* Only background updated – logic unchanged */
+    <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 overflow-y-auto font-sans text-gray-900">
       <div className="min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden transition-all duration-300 mx-auto max-w-[95%] sm:max-w-md lg:max-w-lg">
           <div className="p-5 sm:p-6 md:p-8">

@@ -67,13 +67,13 @@ const ResetPassword = () => {
     if (loading || cooldown > 0) return;
 
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required password fields.");
       return;
     }
 
     // 🔥 PRO POLISH: Validate current password length to save a useless API call
     if (formData.currentPassword.trim().length < 6) {
-      toast.error("Current password seems invalid");
+      toast.error("The current password provided is invalid.");
       return;
     }
 
@@ -84,20 +84,21 @@ const ResetPassword = () => {
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      toast.error("New passwords do not match");
+      toast.error("The entered passwords do not match. Please verify and try again.");
       return;
     }
 
     try {
       setLoading(true);
       // Calls the backend to change the password
-      const response = await api.put("/api/v1/auth/change-password", {
+      await api.put("/api/v1/auth/change-password", {
         // 🔥 PRO POLISH: Added .trim() to prevent trailing space errors
         currentPassword: formData.currentPassword.trim(),
         newPassword: formData.newPassword,
       });
 
-      toast.success(response.data.message || "Password updated successfully");
+      // 🔥 FIX: Removed backend message dependency. Hardcoded UI string instead.
+      toast.success("Your password has been successfully updated.");
       
       // 🔥 FIX: Redirect immediately without timeout
       navigate("/settings", { replace: true });
@@ -113,9 +114,9 @@ const ResetPassword = () => {
         localStorage.setItem("resetPasswordCooldownExpiry", expiry);
         setCooldown(retryAfter);
 
-        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+        toast.error(`Too many attempts. Please try again in ${retryAfter} seconds.`);
       } else {
-        toast.error(err?.response?.data?.message || err.message || "Failed to update password");
+        toast.error("Unable to update password. Please check your current password and try again.");
       }
     } finally {
       setLoading(false);

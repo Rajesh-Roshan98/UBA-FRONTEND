@@ -35,8 +35,9 @@ const ForgotPassword = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // UI States
+  // UI States (Separated to fix the dual-loading issue)
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // 🔥 NEW: Resend cooldown state
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -67,28 +68,36 @@ const ForgotPassword = () => {
 
   // 1. Request OTP
   const handleRequestOtp = async (e) => {
-    e?.preventDefault(); // Added optional chaining so the Resend button can call this safely
-    if (isLoading || resendCooldown > 0) return; // Prevents accidental double click execution and respects cooldown
+    e?.preventDefault(); 
+    // Guard against concurrent executions
+    if (isLoading || isResending || resendCooldown > 0) return; 
 
     // Explicit validation: Only shows toast
     if (!identifier.trim()) {
-      toast.error("Email or User ID is required");
+      toast.error("Please provide an email address or User ID.");
       return;
     }
 
     // 🔥 FIX: Smart validation. Only run email regex if they typed an '@'
     const isEmail = identifier.includes("@");
     if (isEmail && !emailRegex.test(identifier)) {
-      toast.error("Please enter a valid email address.");
+      toast.error("The email address provided is invalid. Please check and try again.");
       return;
     }
 
-    setIsLoading(true);
+    // Smartly route the loading state depending on the active step
+    if (step === 'email') {
+      setIsLoading(true);
+    } else {
+      setIsResending(true);
+    }
     
     try {
       // 🔥 FIX: Send 'identifier' in payload
-      const res = await api.post("/api/v1/auth/forgot-password/send-otp", { identifier: identifier.trim() });
-      toast.success(res.data.message || "OTP sent successfully"); // 🔥 FIX 2: Universal phrasing
+      await api.post("/api/v1/auth/forgot-password/send-otp", { identifier: identifier.trim() });
+      
+      // 🔥 FIX: Removed backend message dependency. Hardcoded UI string instead.
+      toast.success("Verification code sent successfully."); 
       setStep('otp'); 
       
       // 🔥 NEW: Start the cooldown timer and persist it
@@ -108,43 +117,48 @@ const ForgotPassword = () => {
         localStorage.setItem("forgotPasswordCooldownExpiry", expiry);
         setResendCooldown(retryAfter);
 
-        toast.error(err.response.data?.message || `Too many OTP requests. Please try again in ${retryAfter} seconds.`);
+        toast.error(err.response.data?.message || `Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
       } else {
-        const errorMsg = err.response?.data?.message || "Failed to send OTP";
+        const errorMsg = err.response?.data?.message || "Unable to send verification code. Please try again later.";
         toast.error(errorMsg);
       }
     } finally {
+      // Clear both states just to be safe
       setIsLoading(false);
+      setIsResending(false);
     }
   };
 
   // 2. Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (isLoading) return; // Prevents accidental double click execution
+    // Guard against concurrent execution if resend is currently firing
+    if (isLoading || isResending) return; 
 
     const finalOtp = otp.join("");
     if (finalOtp.length !== 6) {
-      toast.error("OTP must be 6 digits.");
+      toast.error("Please enter the complete 6-digit verification code.");
       return;
     }
 
     setIsLoading(true);
     try {
       // 🔥 FIX: Send 'identifier' in payload
-      const res = await api.post("/api/v1/auth/forgot-password/verify-otp", { 
+      await api.post("/api/v1/auth/forgot-password/verify-otp", { 
         identifier: identifier.trim(), 
         otp: Number(finalOtp) 
       });
-      toast.success(res.data.message || "OTP Verified!");
+      
+      // 🔥 FIX: Removed backend message dependency.
+      toast.success("Verification successful.");
       setStep('reset');
     } catch (err) {
       // 🔥 UPDATED: Rate Limit UI catch
       if (err.response?.status === 429) {
         const retryAfter = err.response.data?.retryAfter || 60;
-        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+        toast.error(err.response.data?.message || `Too many verification attempts. Please try again in ${retryAfter} seconds.`);
       } else {
-        const errorMsg = err.response?.data?.message || "Invalid OTP";
+        const errorMsg = err.response?.data?.message || "The verification code is incorrect or has expired.";
         toast.error(errorMsg);
       }
     } finally {
@@ -167,12 +181,12 @@ const ForgotPassword = () => {
     if (isLoading) return; // Prevents accidental double click execution
 
     if (!passwords.new || !passwords.confirm) {
-      toast.error("All fields are required.");
+      toast.error("Please fill in all required password fields.");
       return;
     }
 
     if (passwords.new.length < 8) {
-      toast.error("Password must be at least 8 characters long.");
+      toast.error("Your new password must contain a minimum of 8 characters.");
       return;
     }
 
@@ -183,7 +197,7 @@ const ForgotPassword = () => {
     }
 
     if (passwords.new !== passwords.confirm) {
-      toast.error("Passwords do not match!");
+      toast.error("The entered passwords do not match. Please verify and try again.");
       return;
     }
 
@@ -191,13 +205,14 @@ const ForgotPassword = () => {
     setIsLoading(true);
     try {
       // 🔥 FIX: Send 'identifier' in payload
-      const res = await api.post("/api/v1/auth/forgot-password/reset", { 
+      await api.post("/api/v1/auth/forgot-password/reset", { 
         identifier: identifier.trim(), 
         otp: Number(finalOtp), 
         newPassword: passwords.new 
       });
       
-      toast.success(res.data.message || "Password updated successfully");
+      // 🔥 FIX: Removed backend message dependency.
+      toast.success("Your password has been successfully reset.");
       setStep('success');
       setIsLoading(false); // 🔥 FIX 1: Ensure loading state is turned off on success
 
@@ -213,7 +228,7 @@ const ForgotPassword = () => {
         const retryAfter = err.response.data?.retryAfter || 60;
         toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
       } else {
-        const errorMsg = err.response?.data?.message || "Failed to update password";
+        const errorMsg = err.response?.data?.message || "Unable to reset password. Please try again later.";
         toast.error(errorMsg);
       }
       setIsLoading(false); 
@@ -227,9 +242,9 @@ const ForgotPassword = () => {
     <div className="h-screen w-screen fixed inset-0 bg-slate-50 overflow-hidden">
       {/* MATRIX BACKGROUND (Copied exactly from VerifyEmail) */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-linear-to-b from-slate-50 via-slate-50 to-white" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#f8fafc,#ffffff)]" />
         <div
-          className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[24px_24px]"
+          className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"
           style={{
             maskImage:
               "radial-gradient(circle at center, black 40%, transparent 100%)",
@@ -237,9 +252,9 @@ const ForgotPassword = () => {
               "radial-gradient(circle at center, black 40%, transparent 100%)",
           }}
         />
-        <div className="absolute -top-32 -left-32 w-150 h-150 bg-purple-200/40 rounded-full blur-3xl animate-blob" />
-        <div className="absolute -top-32 -right-32 w-150 h-150 bg-indigo-200/40 rounded-full blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute -bottom-32 left-1/3 w-150 h-150 bg-blue-200/40 rounded-full blur-3xl animate-blob animation-delay-4000" />
+        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] bg-purple-200/40 rounded-full blur-3xl animate-blob" />
+        <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-indigo-200/40 rounded-full blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-32 left-1/3 w-[600px] h-[600px] bg-blue-200/40 rounded-full blur-3xl animate-blob animation-delay-4000" />
       </div>
 
       {/* MAIN CONTENT AREA */}
@@ -359,14 +374,14 @@ const ForgotPassword = () => {
                   {isLoading ? <><Spinner /> Verifying...</> : 'Verify Code'}
                 </motion.button>
 
-                {/* 🔥 NEW: Resend OTP Button exactly matching your VerifyEmail page */}
+                {/* 🔥 NEW: Resend OTP Button using the uncoupled isResending state */}
                 <button
                   type="button"
                   onClick={handleRequestOtp}
-                  disabled={isLoading || resendCooldown > 0}
+                  disabled={isResending || resendCooldown > 0}
                   className="w-full mt-4 text-sm text-indigo-600 hover:underline disabled:text-slate-400 disabled:cursor-not-allowed disabled:no-underline"
                 >
-                  {isLoading
+                  {isResending
                     ? "Sending OTP..."
                     : resendCooldown > 0
                       ? `Resend OTP in ${Math.floor(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, "0")}` 

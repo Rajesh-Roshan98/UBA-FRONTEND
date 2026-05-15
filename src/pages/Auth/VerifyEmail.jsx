@@ -81,8 +81,10 @@ const VerifyEmail = () => {
     if (!email || sendingOtp || resendCooldown > 0) return;
     try {
       setSendingOtp(true);
-      const res = await api.post(`/api/v1/auth/sendotp`, { email });
-      toast.success(res.data.message || "OTP sent");
+      await api.post(`/api/v1/auth/sendotp`, { email });
+      
+      // 🔥 FIX: Removed backend message dependency. Hardcoded UI string instead.
+      toast.success("Verification code sent successfully.");
       setOtpSent(true);
       
       // 🔥 PRO UPGRADE: Start the cooldown timer and persist it
@@ -102,9 +104,9 @@ const VerifyEmail = () => {
         localStorage.setItem("verifyEmailCooldownExpiry", expiry);
         setResendCooldown(retryAfter);
 
-        toast.error(err.response.data?.message || `Too many OTP requests. Please try again in ${retryAfter} seconds.`);
+        toast.error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
       } else {
-        toast.error(err.response?.data?.message || "Failed to send OTP");
+        toast.error("Unable to send verification code. Please try again later.");
       }
     } finally {
       setSendingOtp(false);
@@ -116,7 +118,7 @@ const VerifyEmail = () => {
 
     const finalOtp = otp.join("");
     if (finalOtp.length !== 6) {
-      toast.error("Enter complete OTP");
+      toast.error("Please enter the complete 6-digit verification code.");
       return;
     }
 
@@ -133,9 +135,9 @@ const VerifyEmail = () => {
       // 🔥 UPDATED: Rate Limit UI catch
       if (err.response?.status === 429) {
         const retryAfter = err.response.data?.retryAfter || 60;
-        toast.error(err.response.data?.message || `Too many attempts. Please try again in ${retryAfter} seconds.`);
+        toast.error(`Too many verification attempts. Please try again in ${retryAfter} seconds.`);
       } else {
-        toast.error(err.response?.data?.message || "Invalid OTP");
+        toast.error("The verification code is incorrect or has expired.");
       }
     } finally {
       setVerifying(false);
